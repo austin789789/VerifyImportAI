@@ -33,6 +33,7 @@ class SQLiteRepository:
         self.db_path = Path(db_path)
         self.connection = sqlite3.connect(self.db_path, check_same_thread=False)
         self.connection.row_factory = sqlite3.Row
+        self.connection.execute("PRAGMA foreign_keys = ON")
         self._init_db()
 
     def _init_db(self) -> None:
@@ -92,7 +93,9 @@ class SQLiteRepository:
                 note_id TEXT NOT NULL,
                 spec_id TEXT NOT NULL,
                 position INTEGER NOT NULL,
-                PRIMARY KEY (note_id, spec_id)
+                PRIMARY KEY (note_id, spec_id),
+                FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE,
+                FOREIGN KEY (spec_id) REFERENCES spec_sections(id) ON DELETE CASCADE
             )
             """
         )
@@ -123,7 +126,9 @@ class SQLiteRepository:
                 requirement_id TEXT NOT NULL,
                 spec_id TEXT NOT NULL,
                 position INTEGER NOT NULL,
-                PRIMARY KEY (requirement_id, spec_id)
+                PRIMARY KEY (requirement_id, spec_id),
+                FOREIGN KEY (requirement_id) REFERENCES requirements(id) ON DELETE CASCADE,
+                FOREIGN KEY (spec_id) REFERENCES spec_sections(id) ON DELETE CASCADE
             )
             """
         )
@@ -133,7 +138,9 @@ class SQLiteRepository:
                 requirement_id TEXT NOT NULL,
                 note_id TEXT NOT NULL,
                 position INTEGER NOT NULL,
-                PRIMARY KEY (requirement_id, note_id)
+                PRIMARY KEY (requirement_id, note_id),
+                FOREIGN KEY (requirement_id) REFERENCES requirements(id) ON DELETE CASCADE,
+                FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE
             )
             """
         )
@@ -159,7 +166,9 @@ class SQLiteRepository:
                 test_requirement_id TEXT NOT NULL,
                 requirement_id TEXT NOT NULL,
                 position INTEGER NOT NULL,
-                PRIMARY KEY (test_requirement_id, requirement_id)
+                PRIMARY KEY (test_requirement_id, requirement_id),
+                FOREIGN KEY (test_requirement_id) REFERENCES test_requirements(id) ON DELETE CASCADE,
+                FOREIGN KEY (requirement_id) REFERENCES requirements(id) ON DELETE CASCADE
             )
             """
         )
@@ -313,10 +322,23 @@ class SQLiteRepository:
     def _persist_spec_section(self, section: SpecSection) -> None:
         self.connection.execute(
             """
-            INSERT OR REPLACE INTO spec_sections (
+            INSERT INTO spec_sections (
                 id, artifact_type, schema_version, status, version, section_key, title, text,
                 normalized_text, parser_warnings_json, source_refs_json, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                artifact_type = excluded.artifact_type,
+                schema_version = excluded.schema_version,
+                status = excluded.status,
+                version = excluded.version,
+                section_key = excluded.section_key,
+                title = excluded.title,
+                text = excluded.text,
+                normalized_text = excluded.normalized_text,
+                parser_warnings_json = excluded.parser_warnings_json,
+                source_refs_json = excluded.source_refs_json,
+                created_at = excluded.created_at,
+                updated_at = excluded.updated_at
             """,
             (
                 section.id,
@@ -338,9 +360,18 @@ class SQLiteRepository:
     def _persist_note(self, note: Note) -> None:
         self.connection.execute(
             """
-            INSERT OR REPLACE INTO notes (
+            INSERT INTO notes (
                 id, artifact_type, schema_version, status, version, title, summary, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                artifact_type = excluded.artifact_type,
+                schema_version = excluded.schema_version,
+                status = excluded.status,
+                version = excluded.version,
+                title = excluded.title,
+                summary = excluded.summary,
+                created_at = excluded.created_at,
+                updated_at = excluded.updated_at
             """,
             (
                 note.id,
@@ -359,10 +390,25 @@ class SQLiteRepository:
     def _persist_requirement(self, requirement: Requirement) -> None:
         self.connection.execute(
             """
-            INSERT OR REPLACE INTO requirements (
+            INSERT INTO requirements (
                 id, artifact_type, schema_version, status, version, title, statement, classes_json,
                 asil, cal, graph_node_id, variant_scope, audit_rationale_id, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                artifact_type = excluded.artifact_type,
+                schema_version = excluded.schema_version,
+                status = excluded.status,
+                version = excluded.version,
+                title = excluded.title,
+                statement = excluded.statement,
+                classes_json = excluded.classes_json,
+                asil = excluded.asil,
+                cal = excluded.cal,
+                graph_node_id = excluded.graph_node_id,
+                variant_scope = excluded.variant_scope,
+                audit_rationale_id = excluded.audit_rationale_id,
+                created_at = excluded.created_at,
+                updated_at = excluded.updated_at
             """,
             (
                 requirement.id,
@@ -388,10 +434,20 @@ class SQLiteRepository:
     def _persist_test_requirement(self, test_requirement: TestRequirement) -> None:
         self.connection.execute(
             """
-            INSERT OR REPLACE INTO test_requirements (
+            INSERT INTO test_requirements (
                 id, artifact_type, schema_version, status, version, statement, acceptance_criteria_json,
                 audit_rationale_id, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                artifact_type = excluded.artifact_type,
+                schema_version = excluded.schema_version,
+                status = excluded.status,
+                version = excluded.version,
+                statement = excluded.statement,
+                acceptance_criteria_json = excluded.acceptance_criteria_json,
+                audit_rationale_id = excluded.audit_rationale_id,
+                created_at = excluded.created_at,
+                updated_at = excluded.updated_at
             """,
             (
                 test_requirement.id,
@@ -417,9 +473,16 @@ class SQLiteRepository:
     def _persist_audit_rationale(self, audit_rationale: AuditRationale) -> None:
         self.connection.execute(
             """
-            INSERT OR REPLACE INTO audit_rationales (
+            INSERT INTO audit_rationales (
                 id, artifact_id, source_refs_json, prompt_version, model_version, silver_refs_json, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                artifact_id = excluded.artifact_id,
+                source_refs_json = excluded.source_refs_json,
+                prompt_version = excluded.prompt_version,
+                model_version = excluded.model_version,
+                silver_refs_json = excluded.silver_refs_json,
+                created_at = excluded.created_at
             """,
             (
                 audit_rationale.id,
@@ -435,9 +498,16 @@ class SQLiteRepository:
     def _persist_review(self, review: ReviewRecord) -> None:
         self.connection.execute(
             """
-            INSERT OR REPLACE INTO reviews (
+            INSERT INTO reviews (
                 id, artifact_id, decision, reviewer_id, rejection_tags_json, review_note, reviewed_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                artifact_id = excluded.artifact_id,
+                decision = excluded.decision,
+                reviewer_id = excluded.reviewer_id,
+                rejection_tags_json = excluded.rejection_tags_json,
+                review_note = excluded.review_note,
+                reviewed_at = excluded.reviewed_at
             """,
             (
                 review.id,
@@ -452,16 +522,29 @@ class SQLiteRepository:
 
     def _persist_lock(self, lock: SectionLock) -> None:
         self.connection.execute(
-            "INSERT OR REPLACE INTO locks (section_key, owner_id, expires_at, status) VALUES (?, ?, ?, ?)",
+            """
+            INSERT INTO locks (section_key, owner_id, expires_at, status) VALUES (?, ?, ?, ?)
+            ON CONFLICT(section_key) DO UPDATE SET
+                owner_id = excluded.owner_id,
+                expires_at = excluded.expires_at,
+                status = excluded.status
+            """,
             (lock.section_key, lock.owner_id, lock.expires_at.isoformat(), lock.status),
         )
 
     def _persist_trace_entry(self, trace_entry: TraceMapEntry) -> None:
         self.connection.execute(
             """
-            INSERT OR REPLACE INTO trace_entries (
+            INSERT INTO trace_entries (
                 artifact_id, artifact_type, status, version, schema_version, last_review_id, audit_rationale_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(artifact_id) DO UPDATE SET
+                artifact_type = excluded.artifact_type,
+                status = excluded.status,
+                version = excluded.version,
+                schema_version = excluded.schema_version,
+                last_review_id = excluded.last_review_id,
+                audit_rationale_id = excluded.audit_rationale_id
             """,
             (
                 trace_entry.artifact_id,

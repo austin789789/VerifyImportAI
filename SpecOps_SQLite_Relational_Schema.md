@@ -76,10 +76,11 @@ This migration is covered by tests using a hand-built legacy SQLite fixture.
 
 ## Current Limits
 
-- There are no SQLite foreign key constraints yet.
+- Foreign keys are only enforced on the ordered link tables.
 - Some structured fields remain JSON-backed for speed of implementation.
 - Trace edges are recomputed from link tables rather than normalized into separate edge tables.
 - This schema is still an MVP persistence layer, not a final production database design.
+- Polymorphic relationships such as `audit_rationales.artifact_id` are still application-enforced rather than database-enforced.
 
 ## Operational Checks
 
@@ -88,6 +89,7 @@ Current tests verify:
 - relational columns exist instead of `payload`
 - legacy payload databases migrate correctly
 - link-table rows are written with the expected positions
+- link-table foreign key violations are rejected by SQLite
 - query-supporting indexes are created for current lookup paths
 - `PRAGMA integrity_check` returns `ok`
 
@@ -111,4 +113,21 @@ Current SQLite indexes are intentionally small and only cover the query paths us
 - `requirement_source_notes(note_id)`
 - `test_requirement_sources(requirement_id)`
 
-The next step, if needed, is to add foreign key enforcement and then review whether composite indexes are justified by real query volume.
+## Foreign Key Baseline
+
+SQLite foreign key enforcement is enabled at connection start with `PRAGMA foreign_keys = ON`.
+
+Current enforced relationships:
+
+- `note_source_specs.note_id -> notes.id`
+- `note_source_specs.spec_id -> spec_sections.id`
+- `requirement_source_specs.requirement_id -> requirements.id`
+- `requirement_source_specs.spec_id -> spec_sections.id`
+- `requirement_source_notes.requirement_id -> requirements.id`
+- `requirement_source_notes.note_id -> notes.id`
+- `test_requirement_sources.test_requirement_id -> test_requirements.id`
+- `test_requirement_sources.requirement_id -> requirements.id`
+
+These constraints currently use `ON DELETE CASCADE` so that future cleanup paths can remove parent artifacts without leaving orphaned links.
+
+The next step, if needed, is to extend constraint coverage where the data model is no longer polymorphic and then review whether composite indexes are justified by real query volume.

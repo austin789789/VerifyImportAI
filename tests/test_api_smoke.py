@@ -688,3 +688,30 @@ def test_sqlite_repository_creates_query_indexes(tmp_path: Path) -> None:
         assert "idx_test_requirement_sources_requirement_id" in index_names("test_requirement_sources")
     finally:
         connection.close()
+
+
+def test_sqlite_repository_enforces_link_foreign_keys(tmp_path: Path) -> None:
+    db_path = tmp_path / "specops-fk.db"
+    client = make_sqlite_client(db_path)
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+
+    connection = sqlite3.connect(db_path)
+    try:
+        connection.execute("PRAGMA foreign_keys = ON")
+        assert connection.execute("PRAGMA foreign_keys").fetchone() == (1,)
+
+        raised = False
+        try:
+            connection.execute(
+                "INSERT INTO requirement_source_notes (requirement_id, note_id, position) VALUES (?, ?, ?)",
+                (requirement_id, "N-missing", 1),
+            )
+            connection.commit()
+        except sqlite3.IntegrityError:
+            raised = True
+
+        assert raised is True
+    finally:
+        connection.close()
