@@ -1,0 +1,49 @@
+{
+  "name": "diagnostic_timeout",
+  "spec_section": {
+    "id": "S-oemx-diag-v3_0-sec_027",
+    "artifact_type": "spec_section",
+    "schema_version": "1.0.0",
+    "status": "DRAFT",
+    "version": "v3.0",
+    "section_key": "sec_027",
+    "title": "Diagnostic Session Timeout",
+    "text": "If no tester present message is received for 5 seconds during extended diagnostic session, the ECU shall return to default session and clear the temporary security unlock.",
+    "normalized_text": "If no tester present message is received for 5 seconds during extended diagnostic session, the ECU shall return to default session and clear the temporary security unlock.",
+    "parser_warnings": [
+      "timeout value extracted from adjacent table row"
+    ],
+    "source_refs": [
+      {
+        "page": 87,
+        "bbox": [76, 144, 540, 236],
+        "table_ref": "tbl_7_3"
+      }
+    ],
+    "created_at": "2026-03-31T00:00:00Z",
+    "updated_at": "2026-03-31T00:00:00Z"
+  },
+  "note_request": {
+    "title": "Diagnostic timeout note",
+    "summary": "Extended diagnostic session must fall back to default session after 5 seconds without tester present and revoke temporary unlock state.",
+    "source_spec_ids": ["S-oemx-diag-v3_0-sec_027"]
+  },
+  "requirement_request": {
+    "title": "Return to default diagnostic session after tester timeout",
+    "statement": "The ECU shall return to default diagnostic session and clear the temporary security unlock if no tester present message is received for 5 seconds during extended diagnostic session.",
+    "source_spec_ids": ["S-oemx-diag-v3_0-sec_027"],
+    "source_note_ids": ["$note.id"],
+    "compliance": {
+      "classes": ["SSR"],
+      "asil": "QM",
+      "cal": "2"
+    },
+    "variant_scope": "base"
+  },
+  "expected": {
+    "note_summary": "Extended diagnostic session must fall back to default session after 5 seconds without tester present and revoke temporary unlock state.",
+    "requirement_title": "Return to default diagnostic session after tester timeout",
+    "requirement_variant_scope": "base",
+    "trace_graph_node_prefix": "GN-"
+  }
+}
