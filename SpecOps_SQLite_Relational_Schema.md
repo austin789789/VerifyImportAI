@@ -130,4 +130,24 @@ Current enforced relationships:
 
 These constraints currently use `ON DELETE CASCADE` so that future cleanup paths can remove parent artifacts without leaving orphaned links.
 
+## Cleanup Semantics
+
+Current cleanup behavior is intentionally narrow:
+
+- Deleting a parent artifact row removes its link-table rows through `ON DELETE CASCADE`.
+- Deleting a `requirement` removes rows in:
+  - `requirement_source_specs`
+  - `requirement_source_notes`
+  - `test_requirement_sources`
+- Deleting a `note` removes rows in `requirement_source_notes`.
+- Deleting a `spec_section` removes rows in:
+  - `note_source_specs`
+  - `requirement_source_specs`
+
+Important limitation:
+
+- Deleting a `requirement` does not delete the downstream `test_requirements` row itself.
+- That downstream artifact remains as a now-unlinked record until a higher-level cleanup policy is defined.
+- This is intentional for the current MVP because artifact lifecycle deletion rules are not yet part of the API contract.
+
 The next step, if needed, is to extend constraint coverage where the data model is no longer polymorphic and then review whether composite indexes are justified by real query volume.

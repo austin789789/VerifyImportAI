@@ -715,3 +715,41 @@ def test_sqlite_repository_enforces_link_foreign_keys(tmp_path: Path) -> None:
         assert raised is True
     finally:
         connection.close()
+
+
+def test_sqlite_repository_cascades_link_cleanup_on_parent_delete(tmp_path: Path) -> None:
+    db_path = tmp_path / "specops-cascade.db"
+    client = make_sqlite_client(db_path)
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+    test_requirement_id = create_test_requirement(client, requirement_id)
+
+    connection = sqlite3.connect(db_path)
+    try:
+        connection.execute("PRAGMA foreign_keys = ON")
+
+        connection.execute("DELETE FROM requirements WHERE id = ?", (requirement_id,))
+        connection.commit()
+
+        requirement_note_links = connection.execute(
+            "SELECT requirement_id, note_id FROM requirement_source_notes"
+        ).fetchall()
+        requirement_spec_links = connection.execute(
+            "SELECT requirement_id, spec_id FROM requirement_source_specs"
+        ).fetchall()
+        test_requirement_links = connection.execute(
+            "SELECT test_requirement_id, requirement_id FROM test_requirement_sources"
+        ).fetchall()
+
+        assert requirement_note_links == []
+        assert requirement_spec_links == []
+        assert test_requirement_links == []
+
+        orphan_test_requirement = connection.execute(
+            "SELECT id FROM test_requirements WHERE id = ?",
+            (test_requirement_id,),
+        ).fetchone()
+        assert orphan_test_requirement == (test_requirement_id,)
+    finally:
+        connection.close()
