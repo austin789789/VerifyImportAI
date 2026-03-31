@@ -1,5 +1,6 @@
 from pathlib import Path
 import sqlite3
+import json
 
 from fastapi.testclient import TestClient
 
@@ -117,6 +118,178 @@ def attach_audit_rationale(client: TestClient, artifact_id: str, source_spec_id:
         assert patch_response.status_code == 200
         assert patch_response.json()["audit_rationale_id"] == audit_id
     return audit_id
+
+
+def create_legacy_payload_db(db_path: Path) -> None:
+    connection = sqlite3.connect(db_path)
+    try:
+        for ddl in [
+            "CREATE TABLE spec_sections (id TEXT PRIMARY KEY, payload TEXT NOT NULL)",
+            "CREATE TABLE notes (id TEXT PRIMARY KEY, payload TEXT NOT NULL)",
+            "CREATE TABLE requirements (id TEXT PRIMARY KEY, payload TEXT NOT NULL)",
+            "CREATE TABLE test_requirements (id TEXT PRIMARY KEY, payload TEXT NOT NULL)",
+            "CREATE TABLE audit_rationales (id TEXT PRIMARY KEY, payload TEXT NOT NULL)",
+            "CREATE TABLE reviews (id TEXT PRIMARY KEY, payload TEXT NOT NULL)",
+            "CREATE TABLE locks (section_key TEXT PRIMARY KEY, payload TEXT NOT NULL)",
+            "CREATE TABLE trace_entries (artifact_id TEXT PRIMARY KEY, payload TEXT NOT NULL)",
+        ]:
+            connection.execute(ddl)
+
+        spec_id = "S-legacy"
+        note_id = "N-legacy"
+        requirement_id = "R-legacy"
+        test_requirement_id = "T-legacy"
+        audit_id = "AR-legacy"
+        review_id = "RV-legacy"
+
+        records = {
+            "spec_sections": [
+                (
+                    spec_id,
+                    {
+                        "id": spec_id,
+                        "artifact_type": "spec_section",
+                        "schema_version": "1.0.0",
+                        "status": "DRAFT",
+                        "version": "v1.0",
+                        "section_key": "sec_legacy",
+                        "title": "Legacy Section",
+                        "text": "Legacy spec text.",
+                        "normalized_text": "Legacy spec text.",
+                        "parser_warnings": [],
+                        "source_refs": [{"page": 3, "bbox": [1, 2, 3, 4], "table_ref": None}],
+                        "created_at": "2026-03-31T00:00:00Z",
+                        "updated_at": "2026-03-31T00:00:00Z",
+                    },
+                )
+            ],
+            "notes": [
+                (
+                    note_id,
+                    {
+                        "id": note_id,
+                        "artifact_type": "note",
+                        "schema_version": "1.0.0",
+                        "status": "DRAFT",
+                        "version": "v1.0",
+                        "title": "Legacy Note",
+                        "summary": "Legacy note summary.",
+                        "source_spec_ids": [spec_id],
+                        "created_at": "2026-03-31T00:00:00Z",
+                        "updated_at": "2026-03-31T00:00:00Z",
+                    },
+                )
+            ],
+            "requirements": [
+                (
+                    requirement_id,
+                    {
+                        "id": requirement_id,
+                        "artifact_type": "requirement",
+                        "schema_version": "1.0.0",
+                        "status": "APPROVED",
+                        "version": "v1.0",
+                        "title": "Legacy Requirement",
+                        "statement": "Legacy requirement statement.",
+                        "source_spec_ids": [spec_id],
+                        "source_note_ids": [note_id],
+                        "compliance": {"classes": ["FSR"], "asil": "B", "cal": None},
+                        "trace": {
+                            "graph_node_id": "GN-legacy",
+                            "downstream_test_requirement_ids": [test_requirement_id],
+                        },
+                        "audit_rationale_id": audit_id,
+                        "variant_scope": "base",
+                        "created_at": "2026-03-31T00:00:00Z",
+                        "updated_at": "2026-03-31T00:00:00Z",
+                    },
+                )
+            ],
+            "test_requirements": [
+                (
+                    test_requirement_id,
+                    {
+                        "id": test_requirement_id,
+                        "artifact_type": "test_requirement",
+                        "schema_version": "1.0.0",
+                        "status": "APPROVED",
+                        "version": "v1.0",
+                        "statement": "Legacy test requirement statement.",
+                        "source_requirement_ids": [requirement_id],
+                        "acceptance_criteria": ["Criterion A"],
+                        "audit_rationale_id": audit_id,
+                        "created_at": "2026-03-31T00:00:00Z",
+                        "updated_at": "2026-03-31T00:00:00Z",
+                    },
+                )
+            ],
+            "audit_rationales": [
+                (
+                    audit_id,
+                    {
+                        "id": audit_id,
+                        "artifact_id": requirement_id,
+                        "source_refs": [{"spec_id": spec_id, "page": 3, "bbox": [1, 2, 3, 4]}],
+                        "prompt_version": "legacy-prompt",
+                        "model_version": "legacy-model",
+                        "silver_refs": [],
+                        "created_at": "2026-03-31T00:00:00Z",
+                    },
+                )
+            ],
+            "reviews": [
+                (
+                    review_id,
+                    {
+                        "id": review_id,
+                        "artifact_id": requirement_id,
+                        "decision": "APPROVED",
+                        "reviewer_id": "legacy-reviewer",
+                        "rejection_tags": [],
+                        "review_note": "Legacy approval.",
+                        "reviewed_at": "2026-03-31T00:00:00Z",
+                    },
+                )
+            ],
+            "locks": [
+                (
+                    "sec_legacy",
+                    {
+                        "section_key": "sec_legacy",
+                        "owner_id": "legacy-user",
+                        "expires_at": "2099-03-31T00:00:00Z",
+                        "status": "LOCKED",
+                    },
+                )
+            ],
+            "trace_entries": [
+                (
+                    requirement_id,
+                    {
+                        "artifact_id": requirement_id,
+                        "artifact_type": "requirement",
+                        "upstream_ids": [spec_id, note_id],
+                        "downstream_ids": [test_requirement_id],
+                        "status": "APPROVED",
+                        "version": "v1.0",
+                        "schema_version": "1.0.0",
+                        "last_review_id": review_id,
+                        "audit_rationale_id": audit_id,
+                    },
+                )
+            ],
+        }
+
+        for table, rows in records.items():
+            key = "section_key" if table == "locks" else "artifact_id" if table == "trace_entries" else "id"
+            for record_id, payload in rows:
+                connection.execute(
+                    f"INSERT INTO {table} ({key}, payload) VALUES (?, ?)",
+                    (record_id, json.dumps(payload)),
+                )
+        connection.commit()
+    finally:
+        connection.close()
 
 
 def test_healthcheck() -> None:
@@ -418,5 +591,35 @@ def test_sqlite_repository_uses_relational_tables(tmp_path: Path) -> None:
         }
         assert {"id", "artifact_id", "decision", "reviewer_id", "reviewed_at"} <= review_columns
         assert "payload" not in review_columns
+    finally:
+        connection.close()
+
+
+def test_sqlite_repository_migrates_legacy_payload_schema(tmp_path: Path) -> None:
+    db_path = tmp_path / "legacy-specops.db"
+    create_legacy_payload_db(db_path)
+
+    repo = SQLiteRepository(db_path)
+    requirement = repo.get_requirement("R-legacy")
+    test_requirement = repo.get_test_requirement("T-legacy")
+    trace_entry = repo.get_trace("R-legacy")
+
+    assert requirement.title == "Legacy Requirement"
+    assert requirement.audit_rationale_id == "AR-legacy"
+    assert test_requirement.source_requirement_ids == ["R-legacy"]
+    assert trace_entry.downstream_ids == ["T-legacy"]
+
+    connection = sqlite3.connect(db_path)
+    try:
+        requirement_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(requirements)").fetchall()
+        }
+        assert "payload" not in requirement_columns
+
+        migrated_requirement = connection.execute(
+            "SELECT title, status, audit_rationale_id FROM requirements WHERE id = ?",
+            ("R-legacy",),
+        ).fetchone()
+        assert migrated_requirement == ("Legacy Requirement", "APPROVED", "AR-legacy")
     finally:
         connection.close()
