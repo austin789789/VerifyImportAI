@@ -1,6 +1,6 @@
 # SpecOps AI 策略 (Prompt Strategy)
 
-> 版本: v4.3  
+> 版本: v4.4  
 > 角色: AI 角色定義、CoT 與 安全脫敏
 
 ---
@@ -18,6 +18,9 @@
 
 ### 4. Stage 4 (修正者 - Corrector)
 - 根據退回標籤進行精準修正。
+
+### 5. Stage 5 (調和者 - Harmonizer / Signal-Sync)
+- 當底層通訊協議變更時，自動修正需求中的數值描述與物理單位。
 
 ---
 
@@ -37,9 +40,13 @@
 
 ## 三、知識閉環與白銀資料集 (Knowledge Loop)
 
-### 1. 學習來源
-- 系統自動將 `APPROVED` 狀態且 `edit_distance` 極小的需求存入 **Silver Dataset**。
-- **Few-shot Injection**: 在後續生成時，從 Silver Dataset 中檢索相似規格作為範本注入 Prompt。
+### 1. 學習與精選機制
+- **Silver Dataset**: 僅存入 `APPROVED` 狀態且 `edit_distance` 極小的需求。
+- **Architect Selection**: 定期由資深架構師進行二次精選，移除冗餘或過時邏輯。
+- **Validity Period**: 所有條目預設有效期為 **3 年**，過期需重新評估或降級。
+
+### 2. 生成注入
+- **Few-shot Injection**: 在後續生成時，從精選的 Silver Dataset 中檢索相似規格作為範本注入 Prompt。
 
 ---
 
@@ -48,6 +55,7 @@
 針對 500 頁以上的規格書，使用圖譜檢索代替單純向量搜尋。
 - **Hierarchical Chunking**: 按標題層級切片。
 - **Graph Traversal**: 沿著 `DEPENDS_ON` 或 `CONFLICTS_WITH` 邊尋找跨章節關聯。
+- **Visual Calibration**: 支援人工透過 UI 修正圖譜關係。
 
 ---
 

@@ -1,6 +1,6 @@
 # SpecOps 車載解決方案 (Automotive Solution)
 
-> 版本: v4.3  
+> 版本: v4.4  
 > 角色: 領域專屬標籤、合規與工具對接 (Plugin)
 
 ---
@@ -25,7 +25,9 @@
 ### 2. ISO 21434 道路車輛資安
 - `CSR` (Cybersecurity Requirements).
 - `CAL`: [QM, 1, 2, 3, 4] (Cybersecurity Assurance Level).
-- **TARA 整合**: 在圖譜中新增 `THREAT` 節點與 `MITIGATED_BY` 關係。
+- **TARA/FMEA 整合**: 
+    - 在圖譜中新增 `THREAT` 節點與 `MITIGATED_BY` 關係。
+    - **Risk Re-assessment List**: 當規格變更標記為 `IMPACTED` 時，系統自動產出風險重估清單，提醒 Safety Manager 檢查失效條目。
 
 ---
 
@@ -36,8 +38,9 @@
 ### 1. 支持格式
 - **DBC** (CAN), **ARXML/LDF** (Ethernet/LIN).
 
-### 2. 語義校準流程 (Semantic Alignment)
+### 2. 語義校準與自動同步 (Signal-Sync)
 - **Signal Glossary**: 維護 `signal_glossary.json` 對應自然語言與技術縮寫。
+- **Signal-Sync Agent**: 當通訊矩陣變更時（如 Bit 數改變），AI 自動修正需求描述，並標記為 `FIXED (Auto)`。
 - **Mapping Status**: AI 預測映射 (DRAFT) 與人工校正核准 (APPROVED)。
 
 ---
@@ -54,7 +57,7 @@
 
 ### 1. 同步策略
 - 只有 `APPROVED` 狀態的需求才進入同步。
-- 同步內容包含 `ASIL/CAL` 等合規標籤。
+- 同步內容包含 `ASIL/CAL` 等合規標籤與 **Audit Rationale**。
 
 ---
 
