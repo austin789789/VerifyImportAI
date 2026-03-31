@@ -10,6 +10,7 @@ from .models import (
     CreateNoteRequest,
     CreateRequirementRequest,
     CreateReviewRequest,
+    CreateTestRequirementRequest,
     LockConflictResponse,
     LockRequest,
     Note,
@@ -19,6 +20,7 @@ from .models import (
     ReviewRecord,
     SpecSection,
     SubmitReviewRequest,
+    TestRequirement,
 )
 from .repository import InMemoryRepository, Repository, next_id, repository as default_repository
 
@@ -27,7 +29,7 @@ def create_app(repository: Repository | None = None) -> FastAPI:
     repo = repository or default_repository
     app = FastAPI(
         title="SpecOps MVP API",
-        version="1.2.0",
+        version="1.3.0",
         summary="MVP API contract for SpecOps workflows",
     )
 
@@ -133,6 +135,37 @@ def create_app(repository: Repository | None = None) -> FastAPI:
             request.compliance,
             request.audit_rationale_id,
         )
+
+    @app.post("/test-requirements", response_model=TestRequirement, status_code=status.HTTP_201_CREATED)
+    def create_test_requirement(
+        request: CreateTestRequirementRequest,
+        repository: Repository = Depends(get_repository),
+    ) -> TestRequirement:
+        test_requirement = TestRequirement(
+            id=next_id("T"),
+            schema_version="1.0.0",
+            version="v1.0",
+            statement=request.statement,
+            source_requirement_ids=request.source_requirement_ids,
+            acceptance_criteria=request.acceptance_criteria,
+            audit_rationale_id=request.audit_rationale_id,
+        )
+        return repository.create_test_requirement(test_requirement)
+
+    @app.get("/test-requirements", response_model=dict[str, list[TestRequirement]])
+    def list_test_requirements(
+        status: str | None = Query(default=None),
+        source_requirement_id: str | None = Query(default=None),
+        repository: Repository = Depends(get_repository),
+    ) -> dict[str, list[TestRequirement]]:
+        return {"items": repository.list_test_requirements(status, source_requirement_id)}
+
+    @app.get("/test-requirements/{test_requirement_id}", response_model=TestRequirement)
+    def get_test_requirement(
+        test_requirement_id: str,
+        repository: Repository = Depends(get_repository),
+    ) -> TestRequirement:
+        return repository.get_test_requirement(test_requirement_id)
 
     @app.post("/audit-rationales", response_model=AuditRationale, status_code=status.HTTP_201_CREATED)
     def create_audit_rationale(

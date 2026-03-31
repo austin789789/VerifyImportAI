@@ -1,0 +1,9 @@
+{
+  "statement": "Verify speed is shown in km/h under metric market profile.",
+  "source_requirement_ids": ["R-example"],
+  "acceptance_criteria": [
+    "Display unit is km/h",
+    "Displayed value matches input signal tolerance"
+  ],
+  "audit_rationale_id": null
+}

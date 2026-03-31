@@ -16,6 +16,7 @@ tags:
   - name: Spec Sections
   - name: Notes
   - name: Requirements
+  - name: Test Requirements
   - name: Audit Rationales
   - name: Reviews
   - name: Locks
@@ -243,6 +244,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /test-requirements:
+    post:
+      tags: [Test Requirements]
+      summary: Create a test requirement from requirements
+      operationId: createTestRequirement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTestRequirementRequest'
+      responses:
+        '201':
+          description: Test requirement created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestRequirement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags: [Test Requirements]
+      summary: List test requirements
+      operationId: listTestRequirements
+      parameters:
+        - $ref: '#/components/parameters/StatusParam'
+        - in: query
+          name: source_requirement_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Test requirement list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TestRequirement'
+
+  /test-requirements/{testRequirementId}:
+    get:
+      tags: [Test Requirements]
+      summary: Get a test requirement by id
+      operationId: getTestRequirement
+      parameters:
+        - in: path
+          name: testRequirementId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Test requirement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestRequirement'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /audit-rationales:
     post:
@@ -773,6 +841,75 @@ components:
           type: string
         compliance:
           $ref: '#/components/schemas/Compliance'
+        audit_rationale_id:
+          type:
+            - string
+            - 'null'
+
+    TestRequirement:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - artifact_type
+        - schema_version
+        - status
+        - version
+        - statement
+        - source_requirement_ids
+        - acceptance_criteria
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        artifact_type:
+          type: string
+          const: test_requirement
+        schema_version:
+          type: string
+        status:
+          $ref: '#/components/schemas/ArtifactStatus'
+        version:
+          type: string
+        statement:
+          type: string
+        source_requirement_ids:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        acceptance_criteria:
+          type: array
+          items:
+            type: string
+        audit_rationale_id:
+          type:
+            - string
+            - 'null'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateTestRequirementRequest:
+      type: object
+      additionalProperties: false
+      required: [statement, source_requirement_ids]
+      properties:
+        statement:
+          type: string
+        source_requirement_ids:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        acceptance_criteria:
+          type: array
+          items:
+            type: string
         audit_rationale_id:
           type:
             - string

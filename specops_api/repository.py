@@ -19,6 +19,7 @@ from .models import (
     ReviewRecord,
     SectionLock,
     SpecSection,
+    TestRequirement,
     TraceMapEntry,
 )
 
@@ -42,6 +43,9 @@ class Repository(Protocol):
     def list_requirements(self, status_filter: str | None, source_spec_id: str | None) -> list[Requirement]: ...
     def get_requirement(self, requirement_id: str) -> Requirement: ...
     def patch_requirement(self, requirement_id: str, title: str | None, statement: str | None, compliance, audit_rationale_id: str | None = None) -> Requirement: ...
+    def create_test_requirement(self, test_requirement: TestRequirement) -> TestRequirement: ...
+    def list_test_requirements(self, status_filter: str | None, source_requirement_id: str | None) -> list[TestRequirement]: ...
+    def get_test_requirement(self, test_requirement_id: str) -> TestRequirement: ...
     def create_audit_rationale(self, audit_rationale: AuditRationale) -> AuditRationale: ...
     def get_audit_rationale(self, audit_rationale_id: str) -> AuditRationale: ...
     def submit_requirement_review(self, requirement_id: str) -> Requirement: ...
@@ -58,6 +62,7 @@ class InMemoryRepository:
         self.spec_sections: dict[str, SpecSection] = {}
         self.notes: dict[str, Note] = {}
         self.requirements: dict[str, Requirement] = {}
+        self.test_requirements: dict[str, TestRequirement] = {}
         self.audit_rationales: dict[str, AuditRationale] = {}
         self.reviews: dict[str, ReviewRecord] = {}
         self.locks: dict[str, SectionLock] = {}
@@ -174,13 +179,52 @@ class InMemoryRepository:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Audit rationale not found")
             item.audit_rationale_id = audit_rationale_id
         item.updated_at = utc_now()
-        self.trace_entries[requirement_id].status = item.status
-        self.trace_entries[requirement_id].audit_rationale_id = item.audit_rationale_id
+        trace_entry = self.trace_entries[requirement_id]
+        trace_entry.status = item.status
+        trace_entry.audit_rationale_id = item.audit_rationale_id
+        self.trace_entries[requirement_id] = trace_entry
+        return item
+
+    def create_test_requirement(self, test_requirement: TestRequirement) -> TestRequirement:
+        for source_requirement_id in test_requirement.source_requirement_ids:
+            requirement = self.requirements.get(source_requirement_id)
+            if not requirement:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source requirement not found")
+        self.test_requirements[test_requirement.id] = test_requirement
+        self.trace_entries[test_requirement.id] = TraceMapEntry(
+            artifact_id=test_requirement.id,
+            artifact_type=test_requirement.artifact_type,
+            upstream_ids=test_requirement.source_requirement_ids,
+            downstream_ids=[],
+            status=test_requirement.status,
+            version=test_requirement.version,
+            schema_version=test_requirement.schema_version,
+            audit_rationale_id=test_requirement.audit_rationale_id,
+        )
+        for source_requirement_id in test_requirement.source_requirement_ids:
+            requirement = self.requirements[source_requirement_id]
+            if test_requirement.id not in requirement.trace.downstream_test_requirement_ids:
+                requirement.trace.downstream_test_requirement_ids.append(test_requirement.id)
+                self.trace_entries[source_requirement_id].downstream_ids = requirement.trace.downstream_test_requirement_ids
+        return test_requirement
+
+    def list_test_requirements(self, status_filter: str | None, source_requirement_id: str | None) -> list[TestRequirement]:
+        items = list(self.test_requirements.values())
+        if status_filter:
+            items = [item for item in items if item.status == status_filter]
+        if source_requirement_id:
+            items = [item for item in items if source_requirement_id in item.source_requirement_ids]
+        return items
+
+    def get_test_requirement(self, test_requirement_id: str) -> TestRequirement:
+        item = self.test_requirements.get(test_requirement_id)
+        if not item:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test requirement not found")
         return item
 
     def create_audit_rationale(self, audit_rationale: AuditRationale) -> AuditRationale:
-        if audit_rationale.artifact_id not in self.requirements:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Requirement not found for audit rationale")
+        if audit_rationale.artifact_id not in self.requirements and audit_rationale.artifact_id not in self.test_requirements:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found for audit rationale")
         self.audit_rationales[audit_rationale.id] = audit_rationale
         return audit_rationale
 
@@ -265,6 +309,7 @@ class SQLiteRepository:
         cursor.execute("CREATE TABLE IF NOT EXISTS spec_sections (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
         cursor.execute("CREATE TABLE IF NOT EXISTS notes (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
         cursor.execute("CREATE TABLE IF NOT EXISTS requirements (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS test_requirements (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
         cursor.execute("CREATE TABLE IF NOT EXISTS audit_rationales (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
         cursor.execute("CREATE TABLE IF NOT EXISTS reviews (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
         cursor.execute("CREATE TABLE IF NOT EXISTS locks (section_key TEXT PRIMARY KEY, payload TEXT NOT NULL)")
@@ -411,8 +456,49 @@ class SQLiteRepository:
         self._save_model("trace_entries", "artifact_id", requirement_id, trace)
         return item
 
+    def create_test_requirement(self, test_requirement: TestRequirement) -> TestRequirement:
+        for source_requirement_id in test_requirement.source_requirement_ids:
+            requirement = self.get_requirement(source_requirement_id)
+            if test_requirement.id not in requirement.trace.downstream_test_requirement_ids:
+                requirement.trace.downstream_test_requirement_ids.append(test_requirement.id)
+                self._save_model("requirements", "id", requirement.id, requirement)
+                trace = self.get_trace(requirement.id)
+                trace.downstream_ids = requirement.trace.downstream_test_requirement_ids
+                self._save_model("trace_entries", "artifact_id", requirement.id, trace)
+        self._save_model("test_requirements", "id", test_requirement.id, test_requirement)
+        trace_entry = TraceMapEntry(
+            artifact_id=test_requirement.id,
+            artifact_type=test_requirement.artifact_type,
+            upstream_ids=test_requirement.source_requirement_ids,
+            downstream_ids=[],
+            status=test_requirement.status,
+            version=test_requirement.version,
+            schema_version=test_requirement.schema_version,
+            audit_rationale_id=test_requirement.audit_rationale_id,
+        )
+        self._save_model("trace_entries", "artifact_id", test_requirement.id, trace_entry)
+        return test_requirement
+
+    def list_test_requirements(self, status_filter: str | None, source_requirement_id: str | None) -> list[TestRequirement]:
+        items = self._load_all("test_requirements", TestRequirement)
+        if status_filter:
+            items = [item for item in items if item.status == status_filter]
+        if source_requirement_id:
+            items = [item for item in items if source_requirement_id in item.source_requirement_ids]
+        return items
+
+    def get_test_requirement(self, test_requirement_id: str) -> TestRequirement:
+        item = self._load_model("test_requirements", "id", test_requirement_id, TestRequirement)
+        if not item:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test requirement not found")
+        return item
+
     def create_audit_rationale(self, audit_rationale: AuditRationale) -> AuditRationale:
-        self.get_requirement(audit_rationale.artifact_id)
+        if (
+            not self._load_model("requirements", "id", audit_rationale.artifact_id, Requirement)
+            and not self._load_model("test_requirements", "id", audit_rationale.artifact_id, TestRequirement)
+        ):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found for audit rationale")
         self._save_model("audit_rationales", "id", audit_rationale.id, audit_rationale)
         return audit_rationale
 

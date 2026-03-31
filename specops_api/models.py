@@ -131,6 +131,27 @@ class PatchRequirementRequest(BaseModel):
     audit_rationale_id: str | None = None
 
 
+class TestRequirement(BaseModel):
+    id: str
+    artifact_type: Literal["test_requirement"] = "test_requirement"
+    schema_version: str
+    status: ArtifactStatus = "DRAFT"
+    version: str
+    statement: str
+    source_requirement_ids: list[str]
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    audit_rationale_id: str | None = None
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
+class CreateTestRequirementRequest(BaseModel):
+    statement: str
+    source_requirement_ids: list[str]
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    audit_rationale_id: str | None = None
+
+
 class CreateAuditRationaleRequest(BaseModel):
     artifact_id: str
     source_refs: list[AuditSourceRef]

@@ -64,11 +64,28 @@ def create_requirement(client: TestClient, source_spec_id: str, note_id: str) ->
     return requirement_response.json()["id"]
 
 
-def attach_audit_rationale(client: TestClient, requirement_id: str, source_spec_id: str) -> str:
+def create_test_requirement(client: TestClient, requirement_id: str) -> str:
+    response = client.post(
+        "/test-requirements",
+        json={
+            "statement": "Verify speed is shown in km/h under metric market profile.",
+            "source_requirement_ids": [requirement_id],
+            "acceptance_criteria": [
+                "Display unit is km/h",
+                "Displayed value matches input signal tolerance"
+            ],
+            "audit_rationale_id": None,
+        },
+    )
+    assert response.status_code == 201
+    return response.json()["id"]
+
+
+def attach_audit_rationale(client: TestClient, artifact_id: str, source_spec_id: str) -> str:
     audit_response = client.post(
         "/audit-rationales",
         json={
-            "artifact_id": requirement_id,
+            "artifact_id": artifact_id,
             "source_refs": [
                 {
                     "spec_id": source_spec_id,
@@ -84,12 +101,13 @@ def attach_audit_rationale(client: TestClient, requirement_id: str, source_spec_
     assert audit_response.status_code == 201
     audit_id = audit_response.json()["id"]
 
-    patch_response = client.patch(
-        f"/requirements/{requirement_id}",
-        json={"audit_rationale_id": audit_id},
-    )
-    assert patch_response.status_code == 200
-    assert patch_response.json()["audit_rationale_id"] == audit_id
+    if artifact_id.startswith("R-"):
+        patch_response = client.patch(
+            f"/requirements/{artifact_id}",
+            json={"audit_rationale_id": audit_id},
+        )
+        assert patch_response.status_code == 200
+        assert patch_response.json()["audit_rationale_id"] == audit_id
     return audit_id
 
 
@@ -135,6 +153,26 @@ def test_spec_note_requirement_review_trace_flow() -> None:
     trace = trace_response.json()
     assert spec_section_id in trace["upstream_ids"]
     assert note_id in trace["upstream_ids"]
+
+
+def test_requirement_to_test_requirement_trace_flow() -> None:
+    client = make_memory_client()
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+    test_requirement_id = create_test_requirement(client, requirement_id)
+
+    test_requirement_response = client.get(f"/test-requirements/{test_requirement_id}")
+    assert test_requirement_response.status_code == 200
+    assert test_requirement_response.json()["id"] == test_requirement_id
+
+    requirement_trace_response = client.get(f"/trace/{requirement_id}")
+    assert requirement_trace_response.status_code == 200
+    assert test_requirement_id in requirement_trace_response.json()["downstream_ids"]
+
+    test_requirement_trace_response = client.get(f"/trace/{test_requirement_id}")
+    assert test_requirement_trace_response.status_code == 200
+    assert requirement_id in test_requirement_trace_response.json()["upstream_ids"]
 
 
 def test_approve_and_export_flow() -> None:
@@ -188,6 +226,7 @@ def test_sqlite_repository_persists_across_app_instances(tmp_path: Path) -> None
     spec_section_id = create_spec_section(client_a)
     note_id = create_note(client_a, spec_section_id)
     requirement_id = create_requirement(client_a, spec_section_id, note_id)
+    test_requirement_id = create_test_requirement(client_a, requirement_id)
     attach_audit_rationale(client_a, requirement_id, spec_section_id)
 
     client_b = make_sqlite_client(db_path)
@@ -199,5 +238,10 @@ def test_sqlite_repository_persists_across_app_instances(tmp_path: Path) -> None
     assert requirement_response.status_code == 200
     assert requirement_response.json()["id"] == requirement_id
 
+    test_requirement_response = client_b.get(f"/test-requirements/{test_requirement_id}")
+    assert test_requirement_response.status_code == 200
+    assert test_requirement_response.json()["id"] == test_requirement_id
+
     trace_response = client_b.get(f"/trace/{requirement_id}")
     assert trace_response.status_code == 200
+    assert test_requirement_id in trace_response.json()["downstream_ids"]

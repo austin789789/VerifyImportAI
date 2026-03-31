@@ -13,6 +13,7 @@ This API currently covers the SpecOps MVP core plus the minimum audit path requi
 - parsed spec sections
 - note creation and lookup
 - requirement draft creation and patching
+- test requirement creation and lookup
 - audit rationale creation and lookup
 - review submission and review decisions
 - section locking
@@ -48,6 +49,8 @@ pytest
 - `GET /notes/{noteId}`
 - `POST /requirements`
 - `PATCH /requirements/{requirementId}`
+- `POST /test-requirements`
+- `GET /test-requirements/{testRequirementId}`
 - `POST /audit-rationales`
 - `GET /audit-rationales/{auditRationaleId}`
 - `POST /requirements/{requirementId}/submit-review`
