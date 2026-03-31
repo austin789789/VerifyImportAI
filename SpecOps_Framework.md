@@ -130,3 +130,4 @@
 - `SpecOps_Evaluation_KPI.md`
 - `SpecOps_Integration_Codebeamer.md`
 - `SpecOps_Privacy_Audit_Policy.md`
+- `SpecOps_SQLite_Relational_Schema.md`

@@ -154,7 +154,22 @@ MVP 先不追求完整車載閉環，不做過度承諾項目，例如：
 
 ---
 
-## 五、推薦開發順序
+## 五、目前 Repo 已落地基線
+
+截至目前 MVP repo 已經落地的內容如下：
+
+- FastAPI contract stub 已對齊 OpenAPI。
+- artifact API 已覆蓋 `spec_section -> note -> requirement -> test_requirement`。
+- `requirement` 與 `test_requirement` 都已支援 review workflow 與 audit gate。
+- 預設持久層已切到 SQLite relational baseline，不再以單一 `payload` blob 作為主要儲存格式。
+- ordered link tables 已具備 index 與 foreign key baseline。
+- parent artifact 刪除時，link cleanup 由 FK cascade 處理；但 downstream artifact entity 目前仍可能保留為 unlinked record。
+
+這代表目前 repo 已超過最初的純 Phase 0 / Phase 1 契約草案，但仍未進入完整的 auto-fix、Signal-Sync 或雙向 ALM 整合。
+
+---
+
+## 六、推薦開發順序
 
 1. **資料模型先行**
    - 先落 `spec_section`, `note`, `requirement`, `review_record`, `audit_rationale`
@@ -174,7 +189,7 @@ MVP 先不追求完整車載閉環，不做過度承諾項目，例如：
 
 ---
 
-## 六、Phase 規劃
+## 七、Phase 規劃
 
 ### Phase 0: Foundation
 
@@ -204,7 +219,7 @@ MVP 先不追求完整車載閉環，不做過度承諾項目，例如：
 ### Phase 2: MVP+
 
 交付物:
-- test requirement generation
+- test requirement generation pipeline
 - basic codebeamer export
 - manual recovery queue
 - silver candidate gate
@@ -213,6 +228,7 @@ MVP 先不追求完整車載閉環，不做過度承諾項目，例如：
 - 可匯出 approved requirement
 - 可追蹤待人工恢復項目
 - 可開始收集品質數據
+- 若已存在 `test_requirement` artifact contract，則本 phase 的重點是補齊生成 pipeline，而不是重新定義 artifact schema。
 
 ### Phase 3: Advanced
 
@@ -228,12 +244,13 @@ MVP 先不追求完整車載閉環，不做過度承諾項目，例如：
 
 ---
 
-## 七、最小技術決策建議
+## 八、最小技術決策建議
 
 ### 1. Source of Truth
 
 - 以結構化 artifact store 為主
 - Git 作為版本化與審計輔助，不要把 Git 當主交易資料庫
+- 當前 MVP 以 SQLite relational store 作為預設 baseline；具體表與約束以 `SpecOps_SQLite_Relational_Schema.md` 為準。
 
 ### 2. Graph
 
@@ -254,17 +271,18 @@ MVP 先不追求完整車載閉環，不做過度承諾項目，例如：
 
 ---
 
-## 八、目前最大風險
+## 九、目前最大風險
 
 - parser 輸出不穩會污染後面全部流程
 - requirement schema 若太晚定，後面每個模組都會重工
 - 沒有 rejection taxonomy，auto-fix 會無法成形
 - 太早做 graph UI 會消耗大量時間但不提升 MVP 成功率
 - 太早做 automotive 深整合會把通用核心拖慢
+- 若將目前 SQLite cleanup semantics 誤當成正式產品 lifecycle contract，後續 delete / recovery API 會被過早綁死
 
 ---
 
-## 九、建議的第一批 backlog
+## 十、建議的第一批 backlog
 
 - 定義 `spec_section` schema
 - 定義 `note` schema
@@ -276,10 +294,11 @@ MVP 先不追求完整車載閉環，不做過度承諾項目，例如：
 - 建 requirement generation contract
 - 建 review reject tags v1
 - 建 golden regression fixtures v1
+- 明確文件化 persistence baseline 與 cleanup 邊界
 
 ---
 
-## 十、判斷 MVP 成功的標準
+## 十一、判斷 MVP 成功的標準
 
 MVP 完成時，至少要能做到：
 

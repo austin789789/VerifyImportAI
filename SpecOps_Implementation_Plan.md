@@ -93,6 +93,9 @@
 - reviewer 可完整走完 approve / reject
 - approved artifact 不會被背景程序直接覆蓋
 
+補充:
+- 若 repo 已有 `test_requirement` artifact 與 review contract，本 phase 需一併驗證其 approve / reject / audit gate 行為，而非只覆蓋 `requirement`。
+
 ### Phase 3: Controlled Export + Metrics
 
 目標:
@@ -131,7 +134,26 @@
 
 ---
 
-## 四、依賴順序
+## 四、目前已交付基線
+
+截至目前 repo 中已落地的 MVP 基線如下：
+
+- OpenAPI 與 FastAPI stub 已建立。
+- API 已覆蓋 `spec_section`、`note`、`requirement`、`test_requirement`、`review`、`lock`、`trace`、`export stub`。
+- `requirement` 與 `test_requirement` 已具備 review workflow 與 audit 綁定。
+- 預設資料層已切到 SQLite relational persistence。
+- ordered link tables 已具備 query index 與 foreign key baseline。
+- 已有 legacy payload schema migration 測試、integrity check 與 cleanup semantics coverage。
+
+目前尚未完成的仍包括：
+
+- parser / generation pipeline 真正接上真實 spec 流程
+- delete / recovery API contract
+- 完整 Codebeamer integration persistence
+- auto-fix / Signal-Sync orchestration
+---
+
+## 五、依賴順序
 
 1. Schema
 2. State machine
@@ -145,7 +167,7 @@
 
 ---
 
-## 五、每階段驗收
+## 六、每階段驗收
 
 ### Phase 0 驗收
 - schema 有範例 JSON
@@ -161,34 +183,34 @@
 - approve / reject 可重現
 - reject 必填 tag
 - review record 可查詢
+- `requirement` 與 `test_requirement` 均需通過相同的 review / audit gate baseline
 
 ### Phase 3 驗收
 - export 僅接受 approved artifact
 - 匯出失敗有 integration log
 - regression suite 可自動執行
-
+- persistence baseline 已被文件化，且 cleanup semantics 沒有誤宣稱為正式產品 API 契約
 ---
 
-## 六、建議人力切分
+## 七、建議人力切分
 
 - **Backend / Domain**: schema, state machine, trace, audit, export
+- **Storage / Persistence**: SQLite relational schema, migration, integrity baseline, cleanup boundary
 - **AI / Pipeline**: parser, note generation, requirement generation, regression fixtures
 - **Frontend / Workflow**: review UI, lock handling, audit display
-
 ---
 
-## 七、目前最合理的第一個 Sprint
+## 八、目前最合理的下一個 Sprint
 
-Sprint 1 只做：
+下一個 Sprint 建議只做：
 
-- spec_section / note / requirement schema
-- review_record / audit_rationale schema
-- state machine v1
-- rejection tags v1
-- parser output contract
-- 3 份真實 fixture spec
+- parser prototype 與 section extraction 接真實 spec
+- generation contract 與 audit/trace 實際串接
+- review 流程接真實 artifact lifecycle
+- persistence baseline 文件與 migration notes 補齊
+- 3 份真實 fixture spec / regression fixtures
 
-Sprint 1 不做：
+下一個 Sprint 不做：
 
 - graph visual editor
 - signal-sync
