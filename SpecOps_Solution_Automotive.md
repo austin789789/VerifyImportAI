@@ -1,6 +1,6 @@
 # SpecOps 車載解決方案 (Automotive Solution)
 
-> 版本: v4.4  
+> 版本: v4.5  
 > 角色: 領域專屬標籤、合規與工具對接 (Plugin)
 
 ---
@@ -40,12 +40,25 @@
 
 ### 2. 語義校準與自動同步 (Signal-Sync)
 - **Signal Glossary**: 維護 `signal_glossary.json` 對應自然語言與技術縮寫。
-- **Signal-Sync Agent**: 當通訊矩陣變更時（如 Bit 數改變），AI 自動修正需求描述，並標記為 `FIXED (Auto)`。
+- **Signal-Sync Agent**: 
+    - 當通訊矩陣變更時，AI 自動修正需求描述。
+    - **Confidence Threshold**: 系統計算修正的置信度，若 **Score < 0.6** (如涉及多對一邏輯拆分)，強制標記為 `MANUAL_RECOVERY` 待人工修復。
 - **Mapping Status**: AI 預測映射 (DRAFT) 與人工校正核准 (APPROVED)。
 
 ---
 
-## 四、車載變體實務 (Variant Implementation)
+## 四、工具鑑定與穩定性 (Tool Qualification)
+
+確保系統符合車載開發的高可靠性要求。
+
+### 1. 黃金測試集 (Golden Test Suite)
+- **回歸測試**: 系統維護一組「標準規格-標準需求」的對照集 (Ground Truth)。
+- **AI Regression Check**: 每次更新系統 Prompt 或切換 LLM 模型後，自動執行回歸測試。
+- **Manual Verification**: 定期由人工審核並校正黃金測試集，確保其作為「真值」的權威性。
+
+---
+
+## 五、車載變體實務 (Variant Implementation)
 
 管理多套硬體（Entry, Mid, High-end）開發。
 - **Common Spec**, **Variant Delta**.
@@ -53,7 +66,7 @@
 
 ---
 
-## 五、ALM 整合：Codebeamer Sync
+## 六、ALM 整合：Codebeamer Sync
 
 ### 1. 同步策略
 - 只有 `APPROVED` 狀態的需求才進入同步。
@@ -61,7 +74,7 @@
 
 ---
 
-## 六、MinerU 車載配置 (Parsing Setup)
+## 七、MinerU 車載配置 (Parsing Setup)
 
 - **Layout JSON**: 捕捉表格坐標，支援回溯 PDF 原文。
 - **Table CSV**: 提取燈號矩陣與通訊定義。

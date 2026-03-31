@@ -1,6 +1,6 @@
 # SpecOps AI 策略 (Prompt Strategy)
 
-> 版本: v4.4  
+> 版本: v4.5  
 > 角色: AI 角色定義、CoT 與 安全脫敏
 
 ---
@@ -45,8 +45,15 @@
 - **Architect Selection**: 定期由資深架構師進行二次精選，移除冗餘或過時邏輯。
 - **Validity Period**: 所有條目預設有效期為 **3 年**，過期需重新評估或降級。
 
-### 2. 生成注入
-- **Few-shot Injection**: 在後續生成時，從精選的 Silver Dataset 中檢索相似規格作為範本注入 Prompt。
+### 2. 數據安全與隱私隔離 (NDA Isolation)
+- **Visibility Labels**: 所有 Silver Dataset 條目必須標註權限：
+    - `GLOBAL`: 通用產業知識，可跨專案使用。
+    - `BRAND`: 特定客戶 (OEM) 規範，僅限該品牌專案使用。
+    - `PROJECT`: 極度敏感邏輯，僅限原專案使用。
+- **NDA-aware Injection**: 在 Prompt 生成階段，系統強制根據當前專案背景過濾不符權限的條目，防止技術方案洩漏。
+
+### 3. 生成注入
+- **Few-shot Injection**: 在後續生成時，從精選且符合隱私標籤的 Silver Dataset 中檢索相似規格作為範本注入 Prompt。
 
 ---
 
@@ -55,7 +62,7 @@
 針對 500 頁以上的規格書，使用圖譜檢索代替單純向量搜尋。
 - **Hierarchical Chunking**: 按標題層級切片。
 - **Graph Traversal**: 沿著 `DEPENDS_ON` 或 `CONFLICTS_WITH` 邊尋找跨章節關聯。
-- **Visual Calibration**: 支援人工透過 UI 修正圖譜關係。
+- **Visual Calibration**: 支援人工透過 UI 修正圖譜關係，跨章節修改需經由 `Edge Request` 流程。
 
 ---
 
