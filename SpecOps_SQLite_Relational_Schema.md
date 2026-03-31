@@ -1,0 +1,93 @@
+# SpecOps SQLite Relational Schema
+
+This note documents the current SQLite persistence layout used by the SpecOps MVP API after the move away from `payload` blob storage.
+
+## Purpose
+
+The relational SQLite layer exists to make the MVP easier to inspect, migrate, and validate. The API contract is unchanged, but storage now exposes stable columns for the main workflow artifacts and dedicated link tables for ordered relationships.
+
+## Main Tables
+
+`spec_sections`
+- Stores parsed source sections.
+- Important columns: `id`, `status`, `section_key`, `title`, `text`, `created_at`, `updated_at`.
+- JSON columns retained where a fully relational split is not yet worth the cost: `parser_warnings_json`, `source_refs_json`.
+
+`notes`
+- Stores analyst notes derived from spec sections.
+- Important columns: `id`, `status`, `title`, `summary`, `created_at`, `updated_at`.
+
+`requirements`
+- Stores reviewable requirements.
+- Important columns: `id`, `status`, `title`, `statement`, `variant_scope`, `audit_rationale_id`.
+- Compliance and graph metadata remain explicit columns: `classes_json`, `asil`, `cal`, `graph_node_id`.
+
+`test_requirements`
+- Stores downstream verification artifacts.
+- Important columns: `id`, `status`, `statement`, `audit_rationale_id`, `created_at`, `updated_at`.
+- Acceptance criteria are stored in `acceptance_criteria_json`.
+
+`audit_rationales`
+- Stores rationale records linked to a requirement or test requirement.
+- Important columns: `id`, `artifact_id`, `prompt_version`, `model_version`, `created_at`.
+
+`reviews`
+- Stores approve/reject decisions.
+- Important columns: `id`, `artifact_id`, `decision`, `reviewer_id`, `reviewed_at`.
+- `rejection_tags_json` remains JSON because the MVP does not yet query tags relationally.
+
+`locks`
+- Stores section edit locks.
+- Important columns: `section_key`, `owner_id`, `expires_at`, `status`.
+
+`trace_entries`
+- Stores artifact-level trace metadata.
+- Important columns: `artifact_id`, `artifact_type`, `status`, `version`, `schema_version`, `last_review_id`, `audit_rationale_id`.
+- Upstream and downstream links are derived from link tables at read time.
+
+## Link Tables
+
+`note_source_specs`
+- Ordered mapping from note to source spec sections.
+- Columns: `note_id`, `spec_id`, `position`.
+
+`requirement_source_specs`
+- Ordered mapping from requirement to source spec sections.
+- Columns: `requirement_id`, `spec_id`, `position`.
+
+`requirement_source_notes`
+- Ordered mapping from requirement to source notes.
+- Columns: `requirement_id`, `note_id`, `position`.
+
+`test_requirement_sources`
+- Ordered mapping from test requirement to source requirements.
+- Columns: `test_requirement_id`, `requirement_id`, `position`.
+
+## Migration Behavior
+
+When `SQLiteRepository` opens a database and detects the old `payload` schema in `requirements`, it performs an in-place migration:
+
+1. Load legacy rows from all payload tables into Pydantic models.
+2. Drop the old payload tables.
+3. Create the relational tables.
+4. Rehydrate the relational rows and ordered link tables from the loaded models.
+
+This migration is covered by tests using a hand-built legacy SQLite fixture.
+
+## Current Limits
+
+- There are no SQLite foreign key constraints yet.
+- Some structured fields remain JSON-backed for speed of implementation.
+- Trace edges are recomputed from link tables rather than normalized into separate edge tables.
+- This schema is still an MVP persistence layer, not a final production database design.
+
+## Operational Checks
+
+Current tests verify:
+
+- relational columns exist instead of `payload`
+- legacy payload databases migrate correctly
+- link-table rows are written with the expected positions
+- `PRAGMA integrity_check` returns `ok`
+
+The next step, if needed, is to add explicit indexes and foreign key enforcement once the schema is stable enough to justify migrations with stricter constraints.

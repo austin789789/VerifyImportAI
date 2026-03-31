@@ -623,3 +623,36 @@ def test_sqlite_repository_migrates_legacy_payload_schema(tmp_path: Path) -> Non
         assert migrated_requirement == ("Legacy Requirement", "APPROVED", "AR-legacy")
     finally:
         connection.close()
+
+
+def test_sqlite_repository_passes_integrity_check_and_link_counts(tmp_path: Path) -> None:
+    db_path = tmp_path / "specops-integrity.db"
+    client = make_sqlite_client(db_path)
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+    test_requirement_id = create_test_requirement(client, requirement_id)
+    attach_audit_rationale(client, requirement_id, spec_section_id)
+    attach_audit_rationale(client, test_requirement_id, spec_section_id)
+
+    connection = sqlite3.connect(db_path)
+    try:
+        integrity_result = connection.execute("PRAGMA integrity_check").fetchone()
+        assert integrity_result == ("ok",)
+
+        requirement_note_links = connection.execute(
+            "SELECT requirement_id, note_id, position FROM requirement_source_notes"
+        ).fetchall()
+        assert requirement_note_links == [(requirement_id, note_id, 0)]
+
+        requirement_spec_links = connection.execute(
+            "SELECT requirement_id, spec_id, position FROM requirement_source_specs"
+        ).fetchall()
+        assert requirement_spec_links == [(requirement_id, spec_section_id, 0)]
+
+        test_requirement_links = connection.execute(
+            "SELECT test_requirement_id, requirement_id, position FROM test_requirement_sources"
+        ).fetchall()
+        assert test_requirement_links == [(test_requirement_id, requirement_id, 0)]
+    finally:
+        connection.close()
