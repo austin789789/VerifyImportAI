@@ -151,6 +151,7 @@
 - delete / recovery API contract
 - 完整 Codebeamer integration persistence
 - auto-fix / Signal-Sync orchestration
+- `uv` 開發工作流文件化與 lockfile 基線維護
 ---
 
 ## 五、依賴順序

@@ -33,13 +33,14 @@ This API currently covers the SpecOps MVP core plus the minimum audit path requi
 Install dependencies, then run:
 
 ```bash
-uvicorn main:app --reload
+uv sync
+uv run uvicorn main:app --reload
 ```
 
 ## Test Run
 
 ```bash
-pytest
+uv run pytest -q
 ```
 
 ## Key Endpoints
@@ -64,6 +65,8 @@ pytest
 ## Design Notes
 
 - Default persistence is now SQLite via `specops.db`.
+- Dependency resolution and local execution are standardized on `uv`.
+- `uv.lock` should be committed and treated as the reproducible MVP dependency baseline.
 - Tests use both in-memory and temp SQLite repositories.
 - Error responses are normalized to `{ error, detail }` except lock conflicts, which additionally include `current_lock`.
 - Review decisions now support both `requirement` and `test_requirement` artifacts.
