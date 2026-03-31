@@ -69,8 +69,9 @@
 
 ---
 
-## 七、變體與配置管理 (Variant & Configuration)
+## 八、未來展望 (Future Outlook)
 
-- **Base (基準層)**: 存儲跨機種共享的「通用規格」。
-- **Overlay (疊加層)**: 存儲特定機種的差異化改動。
-- **Resolution**: 動態生成最終視圖：`Final = Base + Overlay`。
+1. **合規閉環 (Compliance Loop)**: 自動生成 ISO 26262 合規證明報告與 FMEA 映射。
+2. **測試閉環 (Test Feedback Loop)**: HIL/SIL 測試結果自動反向回溯並標記受影響的規格。
+3. **AI 輔助檢漏**: 系統自動提示可能遺漏的需求章節。
+4. **自動化測試代碼生成**: 從測試需求直接產出測試腳本。
