@@ -1,0 +1,23 @@
+{
+  "id": "S-oemx-diag-v3_0-sec_027",
+  "artifact_type": "spec_section",
+  "schema_version": "1.0.0",
+  "status": "DRAFT",
+  "version": "v3.0",
+  "section_key": "sec_027",
+  "title": "Diagnostic Session Timeout",
+  "text": "If no tester present message is received for 5 seconds during extended diagnostic session, the ECU shall return to default session and clear the temporary security unlock.",
+  "normalized_text": "If no tester present message is received for 5 seconds during extended diagnostic session, the ECU shall return to default session and clear the temporary security unlock.",
+  "parser_warnings": [
+    "timeout value extracted from adjacent table row"
+  ],
+  "source_refs": [
+    {
+      "page": 87,
+      "bbox": [76, 144, 540, 236],
+      "table_ref": "tbl_7_3"
+    }
+  ],
+  "created_at": "2026-03-31T00:00:00Z",
+  "updated_at": "2026-03-31T00:00:00Z"
+}

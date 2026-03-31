@@ -1,0 +1,21 @@
+{
+  "id": "S-oemx-cluster-v1_0-sec_001",
+  "artifact_type": "spec_section",
+  "schema_version": "1.0.0",
+  "status": "DRAFT",
+  "version": "v1.0",
+  "section_key": "sec_001",
+  "title": "Vehicle Speed Display",
+  "text": "The system shall display vehicle speed in km/h when market profile is metric.",
+  "normalized_text": "The system shall display vehicle speed in km/h when market profile is metric.",
+  "parser_warnings": [],
+  "source_refs": [
+    {
+      "page": 12,
+      "bbox": [100, 200, 400, 260],
+      "table_ref": null
+    }
+  ],
+  "created_at": "2026-03-31T00:00:00Z",
+  "updated_at": "2026-03-31T00:00:00Z"
+}

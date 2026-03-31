@@ -1,0 +1,21 @@
+{
+  "id": "S-oemx-body-v2_1-sec_014",
+  "artifact_type": "spec_section",
+  "schema_version": "1.0.0",
+  "status": "DRAFT",
+  "version": "v2.1",
+  "section_key": "sec_014",
+  "title": "Door Lock Feedback Indication",
+  "text": "When central locking is activated, the body controller shall publish the final lock state within 500 ms and the HMI shall show a locked indicator after state confirmation.",
+  "normalized_text": "When central locking is activated, the body controller shall publish the final lock state within 500 ms and the HMI shall show a locked indicator after state confirmation.",
+  "parser_warnings": [],
+  "source_refs": [
+    {
+      "page": 44,
+      "bbox": [82, 118, 522, 196],
+      "table_ref": null
+    }
+  ],
+  "created_at": "2026-03-31T00:00:00Z",
+  "updated_at": "2026-03-31T00:00:00Z"
+}
