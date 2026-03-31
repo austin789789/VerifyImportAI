@@ -51,6 +51,49 @@
 - `variant_config.json` 必須記錄 Base 鎖定版本、同步策略與 override 規則。
 - 外部同步需支援 idempotent retry，避免重複建立資料。
 
+### 4. MVP SQLite Persistence Baseline
+
+- 當前 MVP API 的預設持久層為 SQLite，但已不再使用單一 `payload` blob 作為主要儲存格式。
+- 核心表已拆成顯式欄位與有序 link tables，實際基線以 `SpecOps_SQLite_Relational_Schema.md` 為準。
+- 目前主表至少包含：
+  - `spec_sections`
+  - `notes`
+  - `requirements`
+  - `test_requirements`
+  - `audit_rationales`
+  - `reviews`
+  - `locks`
+  - `trace_entries`
+- 目前 link tables 至少包含：
+  - `note_source_specs`
+  - `requirement_source_specs`
+  - `requirement_source_notes`
+  - `test_requirement_sources`
+- 部分複合欄位仍以 JSON 欄位保留，例如 `source_refs`, `parser_warnings`, `acceptance_criteria`, `rejection_tags`。
+- 讀取 trace 時，upstream / downstream links 由 link tables 推導，不另維護獨立 edge table。
+
+### 5. 約束與索引基線
+
+- SQLite 連線啟動時必須啟用 `PRAGMA foreign_keys = ON`。
+- 目前 foreign key 約束只覆蓋 ordered link tables，不覆蓋 polymorphic 關聯。
+- link tables 使用 `ON DELETE CASCADE`，以避免父列刪除後留下孤兒 link。
+- 實作必須避免使用會造成刪除再重建語意的 `INSERT OR REPLACE` 更新父列。
+- 父列更新應採 upsert / `ON CONFLICT DO UPDATE`，以避免 cascade 誤刪 child links。
+- MVP 至少要有支援下列查詢的索引：
+  - artifact `status`
+  - `section_key`
+  - `variant_scope`
+  - `audit_rationale_id`
+  - `artifact_id`
+  - link-table 反向查詢欄位，例如 `spec_id`, `note_id`, `requirement_id`
+
+### 6. Cleanup Semantics
+
+- 刪除 parent artifact 時，link-table rows 會透過 FK cascade 自動清除。
+- 目前 cascade 僅保證 link cleanup，不保證 downstream artifact entity 一定被刪除。
+- 例如刪除 `requirement` 會清除 `test_requirement_sources`，但 downstream `test_requirement` 本體仍可能保留。
+- artifact lifecycle delete policy 尚未升格為正式 API contract，因此 cleanup semantics 目前只屬於 persistence baseline。
+
 ---
 
 ## 三、圖譜與知識庫模式 (Graph & Knowledge Base)
