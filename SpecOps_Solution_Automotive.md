@@ -43,9 +43,18 @@
 - **DBC**: CAN 通訊矩陣解析。
 - **ARXML/LDF**: Ethernet/LIN 服務定義。
 
-### 2. 校驗機制 (Consistency Check)
+### 2. 語義校準流程 (Semantic Alignment)
 
-- **Signal Mapping**: 將 `Signal` 節點 `MAPS_TO` 需求節點。
+由於規格書使用自然語言（如 Vehicle Speed）而 DBC 使用技術縮寫（如 Veh_Spd），需建立校準機制：
+
+1. **Extraction**: LLM 從規格書提取所有與訊號相關的自然語言詞彙。
+2. **Auto-Mapping**: LLM 根據語義相似度，預測其對應的 DBC Message 與 Signal。
+3. **Glossary Entry**: 將預測結果寫入 `signal_glossary.json`，狀態標記為 `DRAFT`。
+4. **Human Correction**: 工程師透過 UI 工具校正誤判，並將狀態改為 `APPROVED`。
+
+### 3. 校驗機制 (Consistency Check)
+
+- **Signal Mapping**: 將 `Signal` 節點 `MAPS_TO` 需求節點（依據 `signal_glossary.json`）。
 - **Range Check**: 自動比對規格數值範疇與 DBC 定義。
 
 ---

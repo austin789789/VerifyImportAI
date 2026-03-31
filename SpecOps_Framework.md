@@ -64,7 +64,8 @@
 2. **語義檢核 (GraphRAG)**:
    - **Coverage Check**: 檢查 Spec 是否皆有對應需求。
    - **Conflict Detection**: 偵測邏輯矛盾與互斥。
-   - **Confidence Gate**: 低置信度產出自動標記。
+3. **自動化數據校驗 (Data Cross-Check)**: 自動對比需求描述與底層訊號定義 (DBC/ARXML) 是否吻合。
+4. **置信度門檻 (Confidence Gate)**: LLM 生成時需附帶置信評分，低於 `0.8` 時觸發人工高風險審查標記。
 
 ---
 

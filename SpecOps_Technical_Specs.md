@@ -64,6 +64,22 @@
 
 ---
 
+## 四、多源數據抽象層 (Multi-Source Ingestion)
+
+除了 Markdown 文本，支援「結構化數據源」併入。
+
+### 1. 數據入口類型
+
+- **Parameters**: JSON/CSV 參數對應表。
+- **Signal Specs**: 通訊協議定義檔 (DBC, ARXML, LDF)。
+
+### 2. 整合機制
+
+- 將外部數據映射為 **Data Node**，並建立 `LINKS_TO` 關係。
+- 數據源更新時，自動將下游受影響節點標記為 `IMPACTED`。
+
+---
+
 ## 五、併發處理與存取控制 (Concurrency & RBAC)
 
 為了確保多位工程師同時審查大規模規格書時，資料不被覆蓋且符合合規性要求。
@@ -91,3 +107,34 @@
 
 - 每一筆 `APPROVED` 動作皆需附加 `User ID` 與 `Timestamp`。
 - **數位簽章 (Digital Signature)**: 對於 ASIL C/D 需求，存檔時需進行數位簽章校驗，確保審查流程的法律效力。
+
+---
+
+## 六、訊號詞彙映射表 (Signal Glossary)
+
+為了解決自然語言描述與技術訊號 (DBC/ARXML) 之間的對應鴻溝，系統維護一份映射清單。
+
+### 1. 資料格式 (`signal_glossary.json`)
+
+```json
+{
+  "project": "Project_Name",
+  "mappings": [
+    {
+      "nl_term": "Vehicle Speed",
+      "dbc_message": "ABS_Status_01",
+      "dbc_signal": "Veh_Spd_Raw",
+      "confidence": 0.98,
+      "status": "APPROVED",
+      "human_reviewer": "Engineer_A"
+    }
+  ]
+}
+```
+
+### 2. 欄位定義
+
+- **nl_term**: 規格書中使用的自然語言術語。
+- **dbc_message / dbc_signal**: 對應的底層技術標識符。
+- **status**: `DRAFT` (LLM 預測) 或 `APPROVED` (人工確認)。
+- **confidence**: LLM 進行語義匹配時的置信度。
