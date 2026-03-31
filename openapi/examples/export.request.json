@@ -1,0 +1,5 @@
+{
+  "requirement_id": "R-example",
+  "requested_by": "user-a",
+  "idempotency_key": "export-R-example-v1"
+}

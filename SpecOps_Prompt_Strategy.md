@@ -1,76 +1,106 @@
 # SpecOps AI 策略 (Prompt Strategy)
 
-> 版本: v4.5  
-> 角色: AI 角色定義、CoT 與 安全脫敏
+> 版本: v4.6  
+> 角色: AI 角色、評分治理、知識注入與脫敏規則
 
 ---
 
 ## 一、階段性角色定義 (Role-based Strategy)
 
-### 1. Stage 1 (解析器 - Parser)
-- PDF 轉換 Markdown、表格提取、漏字校正。
+### 1. Stage 1: Parser
 
-### 2. Stage 2 (分析師 - Analyst)
-- 規格邏輯提煉、隱含邊界條件識別。
+- PDF 轉 Markdown、表格提取、來源座標回填、章節切片。
 
-### 3. Stage 3 (架構師 - Architect)
-- 需求拆解、邏輯一致性檢核 (CoT)。
+### 2. Stage 2: Analyst
 
-### 4. Stage 4 (修正者 - Corrector)
-- 根據退回標籤進行精準修正。
+- 提煉規格邏輯、找出限制、例外與邊界條件，產出 Note 與初步圖譜關聯。
 
-### 5. Stage 5 (調和者 - Harmonizer / Signal-Sync)
-- 當底層通訊協議變更時，自動修正需求中的數值描述與物理單位。
+### 3. Stage 3: Architect
+
+- 產出 Requirement，檢查可測性、約束保真度與追蹤鏈完整性。
+
+### 4. Stage 4: Corrector
+
+- 根據 rejection tags、impact scope 與 reviewer 意見做精準修正。
+
+### 5. Stage 5: Harmonizer / Signal-Sync
+
+- 處理底層訊號、變體與外部資料變更後的同步修正。
 
 ---
 
 ## 二、多代理共識評分 (Multi-Agent Consensus)
 
-為了解決評估模型不足的問題，採用多代理辯論機制。
-
 ### 1. 代理職責
-- **Agent A (分析師 Analyst)**: 檢查「語義完整度」，確認是否漏掉規格書中的數值或限制。
-- **Agent B (審核員 Auditor)**: 檢查「規範性與安全性」，確認是否符合 ISO 26262 格式與資安原則。
 
-### 2. 評分機制
-- 兩者獨立評分 (0-10)。
-- 若分數差異 > 3，觸發「代理辯論」機制，由第三個 Agent 進行仲裁或標記為高風險人工審查。
+- **Agent A / Analyst**: 檢查覆蓋率、數值與限制條件完整性。
+- **Agent B / Auditor**: 檢查規範性、測試性與 safety/security 風險。
+- **Agent C / Arbiter**: 只在高分歧或高風險時仲裁。
 
----
+### 2. 評分維度
 
-## 三、知識閉環與白銀資料集 (Knowledge Loop)
+- `coverage_completeness`
+- `constraint_fidelity`
+- `testability`
+- `terminology_consistency`
+- `safety_security_compliance`
 
-### 1. 學習與精選機制
-- **Silver Dataset**: 僅存入 `APPROVED` 狀態且 `edit_distance` 極小的需求。
-- **Architect Selection**: 定期由資深架構師進行二次精選，移除冗餘或過時邏輯。
-- **Validity Period**: 所有條目預設有效期為 **3 年**，過期需重新評估或降級。
+### 3. Gate 規則
 
-### 2. 數據安全與隱私隔離 (NDA Isolation)
-- **Visibility Labels**: 所有 Silver Dataset 條目必須標註權限：
-    - `GLOBAL`: 通用產業知識，可跨專案使用。
-    - `BRAND`: 特定客戶 (OEM) 規範，僅限該品牌專案使用。
-    - `PROJECT`: 極度敏感邏輯，僅限原專案使用。
-- **NDA-aware Injection**: 在 Prompt 生成階段，系統強制根據當前專案背景過濾不符權限的條目，防止技術方案洩漏。
-
-### 3. 生成注入
-- **Few-shot Injection**: 在後續生成時，從精選且符合隱私標籤的 Silver Dataset 中檢索相似規格作為範本注入 Prompt。
+- 各代理分數範圍為 `0-10`。
+- 平均分 `< 8.0` 不得自動通過。
+- `safety_security_compliance < 7.0` 時必須人工審查。
+- 任兩代理分差 `> 3` 時觸發仲裁。
 
 ---
 
-## 四、大規模規格處理與圖譜檢索 (Large-Scale GraphRAG)
+## 三、知識閉環與 Silver Dataset
 
-針對 500 頁以上的規格書，使用圖譜檢索代替單純向量搜尋。
-- **Hierarchical Chunking**: 按標題層級切片。
-- **Graph Traversal**: 沿著 `DEPENDS_ON` 或 `CONFLICTS_WITH` 邊尋找跨章節關聯。
-- **Visual Calibration**: 支援人工透過 UI 修正圖譜關係，跨章節修改需經由 `Edge Request` 流程。
+### 1. 收錄流程
+
+1. artifact 先被標記為 `APPROVED`
+2. 進入 `silver_candidate`
+3. 經 quality gate、privacy gate 與抽樣精選
+4. 成為 `silver_dataset_entry`
+
+### 2. 收錄準則
+
+- `edit_distance` 應以 normalized metric 量測。
+- 不得因修飾性編輯掩蓋實質邏輯變更。
+- safety/security 相關要求若被人工重寫過多，預設不自動升級。
+
+### 3. 注入原則
+
+- 僅可注入符合 `visibility`、`brand_id`、`project_id` 與 `allowed_use_cases` 的條目。
+- 注入時保留來源標識，方便審計與失效清理。
+
+---
+
+## 四、大規模規格處理與 GraphRAG
+
+- 500 頁以上規格優先使用階層切片加圖譜檢索。
+- 先檢索同節點與直接上游，再擴展到 `DEPENDS_ON`、`CONFLICTS_WITH`。
+- 跨章節圖譜修改必須走 `Edge Request`。
 
 ---
 
 ## 五、安全性與部署 (Security & Deployment)
 
 ### 1. 脫敏機制
-- **Regex Masker**, **LLM Scrubber**.
+
+- 先執行規則型 `Regex Masker`，再執行語義型 `LLM Scrubber`。
+- 不允許將未脫敏高敏感欄位直接送往雲端模型。
+- 稽核留存格式必須遵守 `SpecOps_Privacy_Audit_Policy.md`。
 
 ### 2. 部署藍圖
-- **Phase 1**: 雲端 API + 脫敏。
-- **Phase 2**: 地端私有化模型。
+
+- **Phase 1**: 雲端 API + 脫敏閘門 + 審計留存。
+- **Phase 2**: 地端私有化模型處理高敏感專案。
+
+---
+
+## 六、Auto-Fix / Signal-Sync 原則
+
+- 只有通過 eligibility check 的 impacted artifact 才能 auto-fix。
+- 低於 `0.6` 的 confidence 不得直接覆寫核准內容。
+- 所有 auto-fix 結果必須輸出 diff、引用依據與 `fix_rationale`。

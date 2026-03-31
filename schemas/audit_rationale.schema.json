@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "specops/audit_rationale.schema.json",
+  "title": "SpecOps Audit Rationale",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "artifact_id",
+    "source_refs",
+    "prompt_version",
+    "model_version",
+    "created_at"
+  ],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "artifact_id": { "type": "string", "minLength": 1 },
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["spec_id", "page"],
+        "properties": {
+          "spec_id": { "type": "string" },
+          "page": { "type": "integer", "minimum": 1 },
+          "bbox": {
+            "type": ["array", "null"],
+            "items": { "type": "number" },
+            "minItems": 4,
+            "maxItems": 4
+          }
+        }
+      }
+    },
+    "prompt_version": { "type": "string", "minLength": 1 },
+    "model_version": { "type": "string", "minLength": 1 },
+    "silver_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}

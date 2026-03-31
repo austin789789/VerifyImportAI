@@ -1,0 +1,12 @@
+{
+  "title": "Display vehicle speed in metric mode",
+  "statement": "The system shall display vehicle speed in km/h when market profile is metric.",
+  "source_spec_ids": ["S-oemx-cluster-v1_0-sec_001"],
+  "source_note_ids": ["N-oemx-cluster-v1_0-sec_001-001"],
+  "compliance": {
+    "classes": ["FSR"],
+    "asil": "B",
+    "cal": null
+  },
+  "variant_scope": "base"
+}

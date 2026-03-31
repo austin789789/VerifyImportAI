@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "specops/review_record.schema.json",
+  "title": "SpecOps Review Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "artifact_id",
+    "decision",
+    "reviewer_id",
+    "reviewed_at"
+  ],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "artifact_id": { "type": "string", "minLength": 1 },
+    "decision": {
+      "type": "string",
+      "enum": ["APPROVED", "REJECTED"]
+    },
+    "reviewer_id": { "type": "string", "minLength": 1 },
+    "rejection_tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "missing_constraint",
+          "unclear_condition",
+          "wrong_unit",
+          "missing_trace",
+          "safety_risk",
+          "security_risk"
+        ]
+      },
+      "default": []
+    },
+    "review_note": { "type": ["string", "null"] },
+    "reviewed_at": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "decision": { "const": "REJECTED" } },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": {
+          "rejection_tags": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

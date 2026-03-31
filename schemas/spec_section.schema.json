@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "specops/spec_section.schema.json",
+  "title": "SpecOps Spec Section",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "artifact_type",
+    "schema_version",
+    "status",
+    "version",
+    "section_key",
+    "title",
+    "text",
+    "source_refs",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "artifact_type": { "const": "spec_section" },
+    "schema_version": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["DRAFT", "APPROVED", "ARCHIVED"]
+    },
+    "version": { "type": "string", "minLength": 1 },
+    "section_key": { "type": "string", "minLength": 1 },
+    "title": { "type": "string" },
+    "text": { "type": "string" },
+    "normalized_text": { "type": ["string", "null"] },
+    "parser_warnings": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["page"],
+        "properties": {
+          "page": { "type": "integer", "minimum": 1 },
+          "bbox": {
+            "type": ["array", "null"],
+            "items": { "type": "number" },
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "table_ref": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}

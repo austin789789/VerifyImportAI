@@ -1,0 +1,932 @@
+openapi: 3.1.0
+info:
+  title: SpecOps MVP API
+  version: 1.0.0
+  summary: MVP API contract for SpecOps parsing, review, traceability, locking, and export workflows.
+  description: >
+    This OpenAPI spec covers the minimum API surface required for the SpecOps MVP.
+    It intentionally excludes advanced auto-fix orchestration, Signal-Sync automation,
+    variant synchronization, and deep automotive workflow extensions.
+
+servers:
+  - url: https://api.specops.local
+    description: Example local deployment
+
+tags:
+  - name: Spec Sections
+  - name: Requirements
+  - name: Audit Rationales
+  - name: Reviews
+  - name: Locks
+  - name: Trace
+  - name: Exports
+
+paths:
+  /spec-sections:
+    post:
+      tags: [Spec Sections]
+      summary: Upsert a parsed spec section
+      operationId: upsertSpecSection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpecSection'
+      responses:
+        '201':
+          description: Spec section created or updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecSection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags: [Spec Sections]
+      summary: List spec sections
+      operationId: listSpecSections
+      parameters:
+        - $ref: '#/components/parameters/StatusParam'
+        - in: query
+          name: section_key
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Spec section list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SpecSection'
+
+  /spec-sections/{specSectionId}:
+    get:
+      tags: [Spec Sections]
+      summary: Get a spec section by id
+      operationId: getSpecSection
+      parameters:
+        - $ref: '#/components/parameters/SpecSectionIdParam'
+      responses:
+        '200':
+          description: Spec section
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecSection'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /requirements:
+    post:
+      tags: [Requirements]
+      summary: Create a requirement draft
+      operationId: createRequirement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRequirementRequest'
+      responses:
+        '201':
+          description: Requirement created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Requirement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags: [Requirements]
+      summary: List requirements
+      operationId: listRequirements
+      parameters:
+        - $ref: '#/components/parameters/StatusParam'
+        - in: query
+          name: source_spec_id
+          schema:
+            type: string
+        - in: query
+          name: review_queue
+          schema:
+            type: string
+            enum: [all, impacted, manual_recovery, pending_review]
+      responses:
+        '200':
+          description: Requirement list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Requirement'
+
+  /requirements/{requirementId}:
+    get:
+      tags: [Requirements]
+      summary: Get a requirement by id
+      operationId: getRequirement
+      parameters:
+        - $ref: '#/components/parameters/RequirementIdParam'
+      responses:
+        '200':
+          description: Requirement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Requirement'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Requirements]
+      summary: Update editable fields of a non-approved requirement
+      operationId: patchRequirement
+      parameters:
+        - $ref: '#/components/parameters/RequirementIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchRequirementRequest'
+      responses:
+        '200':
+          description: Requirement updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Requirement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Requirement cannot be patched in current state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /audit-rationales:
+    post:
+      tags: [Audit Rationales]
+      summary: Create an audit rationale for a requirement
+      operationId: createAuditRationale
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAuditRationaleRequest'
+      responses:
+        '201':
+          description: Audit rationale created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditRationale'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /audit-rationales/{auditRationaleId}:
+    get:
+      tags: [Audit Rationales]
+      summary: Get an audit rationale by id
+      operationId: getAuditRationale
+      parameters:
+        - in: path
+          name: auditRationaleId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audit rationale
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditRationale'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /requirements/{requirementId}/submit-review:
+    post:
+      tags: [Requirements]
+      summary: Submit a requirement for review
+      operationId: submitRequirementReview
+      parameters:
+        - $ref: '#/components/parameters/RequirementIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitReviewRequest'
+      responses:
+        '200':
+          description: Requirement moved to IN_REVIEW
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Requirement'
+        '409':
+          description: Invalid state transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reviews:
+    post:
+      tags: [Reviews]
+      summary: Record an approve or reject decision
+      operationId: createReview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReviewRequest'
+      responses:
+        '201':
+          description: Review recorded and artifact state updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDecisionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Invalid state transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reviews/{reviewId}:
+    get:
+      tags: [Reviews]
+      summary: Get a review record
+      operationId: getReview
+      parameters:
+        - $ref: '#/components/parameters/ReviewIdParam'
+      responses:
+        '200':
+          description: Review record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewRecord'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /locks/{sectionKey}:
+    post:
+      tags: [Locks]
+      summary: Acquire or renew a section lock
+      operationId: acquireOrRenewLock
+      parameters:
+        - $ref: '#/components/parameters/SectionKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LockRequest'
+      responses:
+        '200':
+          description: Lock acquired or renewed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SectionLock'
+        '409':
+          description: Lock conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LockConflictResponse'
+    delete:
+      tags: [Locks]
+      summary: Release a section lock
+      operationId: releaseLock
+      parameters:
+        - $ref: '#/components/parameters/SectionKeyParam'
+        - in: query
+          name: owner_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Lock released
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /trace/{artifactId}:
+    get:
+      tags: [Trace]
+      summary: Get upstream and downstream traceability for an artifact
+      operationId: getTraceMap
+      parameters:
+        - $ref: '#/components/parameters/ArtifactIdParam'
+      responses:
+        '200':
+          description: Traceability graph entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraceMapEntry'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /exports/codebeamer:
+    post:
+      tags: [Exports]
+      summary: Export an approved requirement to Codebeamer
+      operationId: exportRequirementToCodebeamer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodebeamerExportRequest'
+      responses:
+        '202':
+          description: Export job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportJobResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Artifact is not exportable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    SpecSectionIdParam:
+      in: path
+      name: specSectionId
+      required: true
+      schema:
+        type: string
+    RequirementIdParam:
+      in: path
+      name: requirementId
+      required: true
+      schema:
+        type: string
+    ReviewIdParam:
+      in: path
+      name: reviewId
+      required: true
+      schema:
+        type: string
+    SectionKeyParam:
+      in: path
+      name: sectionKey
+      required: true
+      schema:
+        type: string
+    ArtifactIdParam:
+      in: path
+      name: artifactId
+      required: true
+      schema:
+        type: string
+    StatusParam:
+      in: query
+      name: status
+      schema:
+        $ref: '#/components/schemas/ArtifactStatus'
+
+  responses:
+    BadRequest:
+      description: Invalid request payload
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ArtifactStatus:
+      type: string
+      enum:
+        - DRAFT
+        - IN_REVIEW
+        - APPROVED
+        - REJECTED
+        - AUTO_FIX_IN_PROGRESS
+        - AUTO_FIXED_PENDING_REVIEW
+        - IMPACTED
+        - MANUAL_RECOVERY
+        - ARCHIVED
+
+    Visibility:
+      type: string
+      enum: [GLOBAL, BRAND, PROJECT]
+
+    SourceRef:
+      type: object
+      additionalProperties: false
+      required: [page]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        bbox:
+          type:
+            - array
+            - 'null'
+          items:
+            type: number
+          minItems: 4
+          maxItems: 4
+        table_ref:
+          type:
+            - string
+            - 'null'
+
+    Compliance:
+      type: object
+      additionalProperties: false
+      required: [classes, asil, cal]
+      properties:
+        classes:
+          type: array
+          items:
+            type: string
+        asil:
+          type:
+            - string
+            - 'null'
+          enum: [QM, A, B, C, D, null]
+        cal:
+          type:
+            - string
+            - 'null'
+          enum: [QM, '1', '2', '3', '4', null]
+
+    SpecSection:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - artifact_type
+        - schema_version
+        - status
+        - version
+        - section_key
+        - title
+        - text
+        - source_refs
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        artifact_type:
+          type: string
+          const: spec_section
+        schema_version:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, APPROVED, ARCHIVED]
+        version:
+          type: string
+        section_key:
+          type: string
+        title:
+          type: string
+        text:
+          type: string
+        normalized_text:
+          type:
+            - string
+            - 'null'
+        parser_warnings:
+          type: array
+          items:
+            type: string
+        source_refs:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/SourceRef'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Requirement:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - artifact_type
+        - schema_version
+        - status
+        - version
+        - title
+        - statement
+        - source_spec_ids
+        - source_note_ids
+        - trace
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        artifact_type:
+          type: string
+          const: requirement
+        schema_version:
+          type: string
+        status:
+          $ref: '#/components/schemas/ArtifactStatus'
+        version:
+          type: string
+        title:
+          type: string
+        statement:
+          type: string
+        source_spec_ids:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        source_note_ids:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        compliance:
+          $ref: '#/components/schemas/Compliance'
+        trace:
+          type: object
+          additionalProperties: false
+          required: [graph_node_id, downstream_test_requirement_ids]
+          properties:
+            graph_node_id:
+              type: string
+            downstream_test_requirement_ids:
+              type: array
+              items:
+                type: string
+        audit_rationale_id:
+          type:
+            - string
+            - 'null'
+        variant_scope:
+          type: string
+          enum: [base, overlay]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateRequirementRequest:
+      type: object
+      additionalProperties: false
+      required: [title, statement, source_spec_ids, source_note_ids, variant_scope]
+      properties:
+        title:
+          type: string
+        statement:
+          type: string
+        source_spec_ids:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        source_note_ids:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        compliance:
+          $ref: '#/components/schemas/Compliance'
+        variant_scope:
+          type: string
+          enum: [base, overlay]
+
+    PatchRequirementRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        title:
+          type: string
+        statement:
+          type: string
+        compliance:
+          $ref: '#/components/schemas/Compliance'
+        audit_rationale_id:
+          type:
+            - string
+            - 'null'
+
+    AuditSourceRef:
+      type: object
+      additionalProperties: false
+      required: [spec_id, page]
+      properties:
+        spec_id:
+          type: string
+        page:
+          type: integer
+          minimum: 1
+        bbox:
+          type:
+            - array
+            - 'null'
+          items:
+            type: number
+          minItems: 4
+          maxItems: 4
+
+    AuditRationale:
+      type: object
+      additionalProperties: false
+      required: [id, artifact_id, source_refs, prompt_version, model_version, created_at]
+      properties:
+        id:
+          type: string
+        artifact_id:
+          type: string
+        source_refs:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/AuditSourceRef'
+        prompt_version:
+          type: string
+        model_version:
+          type: string
+        silver_refs:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    CreateAuditRationaleRequest:
+      type: object
+      additionalProperties: false
+      required: [artifact_id, source_refs, prompt_version, model_version]
+      properties:
+        artifact_id:
+          type: string
+        source_refs:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/AuditSourceRef'
+        prompt_version:
+          type: string
+        model_version:
+          type: string
+        silver_refs:
+          type: array
+          items:
+            type: string
+
+    SubmitReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [reviewer_id]
+      properties:
+        reviewer_id:
+          type: string
+        review_note:
+          type:
+            - string
+            - 'null'
+
+    ReviewRecord:
+      type: object
+      additionalProperties: false
+      required: [id, artifact_id, decision, reviewer_id, reviewed_at]
+      properties:
+        id:
+          type: string
+        artifact_id:
+          type: string
+        decision:
+          type: string
+          enum: [APPROVED, REJECTED]
+        reviewer_id:
+          type: string
+        rejection_tags:
+          type: array
+          items:
+            type: string
+            enum:
+              - missing_constraint
+              - unclear_condition
+              - wrong_unit
+              - missing_trace
+              - safety_risk
+              - security_risk
+        review_note:
+          type:
+            - string
+            - 'null'
+        reviewed_at:
+          type: string
+          format: date-time
+
+    CreateReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [artifact_id, decision, reviewer_id]
+      properties:
+        artifact_id:
+          type: string
+        decision:
+          type: string
+          enum: [APPROVED, REJECTED]
+        reviewer_id:
+          type: string
+        rejection_tags:
+          type: array
+          items:
+            type: string
+            enum:
+              - missing_constraint
+              - unclear_condition
+              - wrong_unit
+              - missing_trace
+              - safety_risk
+              - security_risk
+        review_note:
+          type:
+            - string
+            - 'null'
+      allOf:
+        - if:
+            properties:
+              decision:
+                const: REJECTED
+            required: [decision]
+          then:
+            properties:
+              rejection_tags:
+                minItems: 1
+
+    ReviewDecisionResponse:
+      type: object
+      additionalProperties: false
+      required: [review, artifact]
+      properties:
+        review:
+          $ref: '#/components/schemas/ReviewRecord'
+        artifact:
+          $ref: '#/components/schemas/Requirement'
+
+    LockRequest:
+      type: object
+      additionalProperties: false
+      required: [owner_id]
+      properties:
+        owner_id:
+          type: string
+        ttl_minutes:
+          type: integer
+          minimum: 1
+          maximum: 30
+          default: 30
+
+    SectionLock:
+      type: object
+      additionalProperties: false
+      required: [section_key, owner_id, expires_at]
+      properties:
+        section_key:
+          type: string
+        owner_id:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [LOCKED]
+
+    LockConflictResponse:
+      type: object
+      additionalProperties: false
+      required: [error, current_lock]
+      properties:
+        error:
+          type: string
+        current_lock:
+          $ref: '#/components/schemas/SectionLock'
+
+    TraceMapEntry:
+      type: object
+      additionalProperties: false
+      required:
+        - artifact_id
+        - artifact_type
+        - upstream_ids
+        - downstream_ids
+        - status
+        - version
+        - schema_version
+      properties:
+        artifact_id:
+          type: string
+        artifact_type:
+          type: string
+        upstream_ids:
+          type: array
+          items:
+            type: string
+        downstream_ids:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        version:
+          type: string
+        schema_version:
+          type: string
+        last_review_id:
+          type:
+            - string
+            - 'null'
+        audit_rationale_id:
+          type:
+            - string
+            - 'null'
+
+    CodebeamerExportRequest:
+      type: object
+      additionalProperties: false
+      required: [requirement_id, requested_by]
+      properties:
+        requirement_id:
+          type: string
+        requested_by:
+          type: string
+        idempotency_key:
+          type:
+            - string
+            - 'null'
+
+    ExportJobResponse:
+      type: object
+      additionalProperties: false
+      required: [job_id, status]
+      properties:
+        job_id:
+          type: string
+        status:
+          type: string
+          enum: [QUEUED, RUNNING, SUCCEEDED, FAILED]
+        integration_log_id:
+          type:
+            - string
+            - 'null'
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: string
+        detail:
+          type:
+            - string
+            - 'null'

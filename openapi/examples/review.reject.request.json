@@ -1,0 +1,7 @@
+{
+  "artifact_id": "R-example",
+  "decision": "REJECTED",
+  "reviewer_id": "reviewer-a",
+  "rejection_tags": ["missing_trace"],
+  "review_note": "Need audit rationale before approval."
+}

@@ -1,102 +1,132 @@
 # SpecOps 核心框架 (Framework)
 
-> 版本: v4.4 -> v4.5  
-> 角色: 核心邏輯、原則與通用流程
+> 版本: v4.6  
+> 角色: 核心邏輯、原則、主流程與共通治理規則
 
 ---
 
 ## 一、系統目標
 
-透過 LLM 與 圖譜技術，解決規格工程中「追蹤難、更新慢、檢核累」的痛點。
-- **效率**: 自動化生成初步需求與測試案例。
-- **精確度**: 跨章節邏輯衝突自動偵測。
-- **完整性**: 確保規格內容 100% 覆蓋需求。
-- **可追蹤性**: 全流程雙向追蹤 (Bi-directional Traceability)。
-- **合規證據**: 提供符合 ISO 26262/21434 的自動化審計追蹤 (Audit Rationale)。
+透過 LLM、結構化資料與圖譜技術，降低規格工程中的追蹤成本、更新延遲與人工檢核負擔。
+
+- **效率**: 自動生成初版 Note、Requirement、Test Requirement。
+- **精確度**: 偵測跨章節邏輯衝突、訊號映射失配與版本漂移。
+- **完整性**: 以可量測指標追蹤需求覆蓋率與漏失率，而非不可驗證的 100% 宣稱。
+- **可追蹤性**: 建立從來源規格到測試需求與稽核依據的雙向追蹤。
+- **合規證據**: 為 ISO 26262 / ISO 21434 保留審查、生成與修正依據。
 
 ---
 
 ## 二、核心設計原則
 
-1. **全流程可追蹤**: `SPEC → NOTE → REQUIREMENT → TEST REQUIREMENT`。
-2. **Human-in-the-loop**: LLM 為輔，人工審查為最終準則。
-3. **數據隱私與 NDA 隔離 (Data Isolation)**: 確保跨專案、跨品牌 (OEM) 的知識不被 AI 學習洩漏。
-4. **全資料留存 (Auditability)**: 儲存所有 LLM 原始輸入/輸出、Prompt 版本與人工修正紀錄。
-5. **模組化變體**: 支援 Base + Overlay 模式管理多機種差異。
-6. **知識閉環 (Knowledge Loop)**: 系統從人工核准且經過資深架構師精選的資料中自動學習，建立具備時效性 (3 年) 的「白銀資料集」。
+1. **全流程可追蹤**: `SPEC -> NOTE -> REQUIREMENT -> TEST_REQUIREMENT`，並保留 `GRAPH`、`AUDIT_RATIONALE`、`SIGNAL_MAPPING` 與 `VARIANT_OVERLAY` 關聯。
+2. **Human-in-the-loop**: LLM 只提供候選產出與修正建議，人工審查才是最終核准來源。
+3. **NDA 隔離**: 知識資產必須根據 `visibility`、`brand_id`、`project_id` 過濾後才能注入生成流程。
+4. **可審計**: 保留生成依據、Prompt 版本、人工修正、模型版本與人工操作軌跡，但保存策略須遵守脫敏與權限規則。
+5. **模組化變體**: 採 Base + Overlay 管理變體，避免複製整套需求。
+6. **知識閉環**: 只有通過品質閘門的候選條目才能成為 Silver Dataset 正式條目。
 
 ---
 
-## 三、四大核心階段 (The 4-Stage Process)
+## 三、五階段核心流程 (The 5-Stage Pipeline)
 
-1. **階段 1: Spec 結構化 (PDF → Markdown)**: 解決 OCR 與版面解析問題。
-2. **階段 2: 規格理解對齊 (Note Generation)**: 建立語義中繼站，過濾雜訊。
-3. **階段 3: 需求生成 (Req Generation)**: 從 Note 衍生出可測試的需求。
-4. **階段 4: 測試需求 (Test Req Generation)**: 確保需求可驗證。
-5. **階段 5: 變更同步 (Signal-Sync)**: 底層訊號變更後的自動修正機制。
+1. **Stage 1: Spec Structuring (PDF -> Markdown)**  
+   解析 OCR、版面、表格與來源座標，產出可引用的規格章節。
+2. **Stage 2: Note Generation**  
+   將規格整理為語義清晰、可審查的 Note 與初步圖譜節點。
+3. **Stage 3: Requirement Generation**  
+   從 Note 推導可驗證 Requirement，建立來源與下游追蹤鏈。
+4. **Stage 4: Test Requirement Generation**  
+   從 Requirement 產生可驗證的 Test Requirement 與驗收依據。
+5. **Stage 5: Change Sync / Signal-Sync**  
+   當 Spec、Signal、Base Variant 或外部整合資料變更時，執行 Impact Analysis 與同步修正。
+
+註: Stage 5 為持續性流程，可在 Stage 1-4 完成後重複觸發。
 
 ---
 
 ## 四、結構化審查系統 (Review System)
 
-採用 **Atomic Review（單條審查）** 與 **Section Locking（章節鎖定）** 模式。
+採用 **Atomic Review** 與 **Section Locking**。
 
-### 併發衝突管理
-- **Pessimistic Locking**: 使用者編輯某章節時，系統鎖定該區段，防止並行衝突。
-- **Edge Request**: 跨章節連線修改權限採請求核准制 (Pending Request)。
+### 1. 併發衝突管理
 
-### 審查狀態機 (Status Machine)
-- `LOCKED`: 某使用者正在編輯該章節，其他使用者僅能讀取 (唯讀)。
-- `DRAFT`: 待審查。
-- `APPROVED`: 通過審查。**自動同步至 Silver Dataset** 作為 AI 學習範本。
-- `REJECTED`: 退回修正。需強制選擇結構化標籤。
-- `FIXING`: 系統根據退回標籤進行 **Self-Fix (自動修正)**。
-- `FIXED`: 修正後重啟流程，待人工二次審查。
-- `IMPACTED`: 因上層變動或訊號更新導致失效。
-- `MANUAL_RECOVERY`: 複雜變更導致 AI 置信度過低，強制進入人工修復。
+- **Section-level Pessimistic Locking**: 章節被編輯時鎖定為唯讀。
+- **Pending Edge Request**: 跨章節圖譜關係變更需由另一側持鎖者或授權審查者核准。
+- **Lock TTL**: 鎖具時效，逾時後需續租或釋放。
+
+### 2. 正式狀態集合
+
+- `DRAFT`: 初始草稿。
+- `IN_REVIEW`: 已提交人工審查。
+- `APPROVED`: 審查核准，可作為正式產物與下游同步來源。
+- `REJECTED`: 人工退回，需附結構化原因標籤。
+- `AUTO_FIX_IN_PROGRESS`: 系統根據退回原因或 impact 進行自動修正。
+- `AUTO_FIXED_PENDING_REVIEW`: 已自動修正，待人工覆核。
+- `IMPACTED`: 因上游變更而失效或待重審。
+- `MANUAL_RECOVERY`: 無法安全自動修正，需人工處理。
+- `ARCHIVED`: 歷史資料封存。
+
+### 3. 狀態治理原則
+
+- `APPROVED` 不等於自動進入 Silver Dataset，只會先成為 `silver_candidate`。
+- 所有自動修正都必須附 `fix_rationale` 與 diff。
+- `IMPACTED` 與 `MANUAL_RECOVERY` 必須指派 owner、severity 與 due date。
 
 ---
 
 ## 五、變更管理 (Change Management)
 
-實現 **Automated Impact Analysis** 與 **Signal-Sync**。
+### 1. Impact Analysis 流程
 
-### 1. 影響分析流程
-1. **Markdown Diff**: 對比新舊版規格。
-2. **Impact Analysis**: 識別受影響的下游節點。
-3. **Signal Integration**: 當底層訊號 (DBC/ARXML) 變更時，觸發 **Signal-Sync Agent** 自動修正需求數值 (若 Confidence > 0.6)。
-4. **Propagation**: 自動將相關節點改為 `IMPACTED` 或 `FIXED (Auto)`。
+1. **Diff Detection**: 比對新舊版 Spec / Signal / Variant / 外部 ALM 資料。
+2. **Impact Scope Resolution**: 依 traceability 與 graph edge 找出受影響節點。
+3. **Auto-Fix Eligibility Check**: 判斷是否允許自動修正。
+4. **Propagation**:
+   - 可安全自動修正: 進入 `AUTO_FIX_IN_PROGRESS`，成功後轉 `AUTO_FIXED_PENDING_REVIEW`。
+   - 不可安全自動修正: 轉 `MANUAL_RECOVERY`。
+   - 僅需重審: 標記為 `IMPACTED`。
 
-### 2. 變體同步策略 (Variant Sync Strategy)
-- **Version Locking**: Overlay 預設鎖定在特定 Base 版本。
-- **Manual Sync**: 需由工程師手動觸發「版本同步」，確保開發環境穩定。
+### 2. Signal-Sync 原則
+
+- 僅針對已建立 signal mapping 的需求啟動。
+- 置信度門檻預設為 `0.6`，但低於門檻時不得直接覆寫正式核准內容。
+- 單位轉換、枚舉調整、多對一映射拆分屬高風險場景，預設需人工覆核。
+
+### 3. 變體同步策略
+
+- **Version Locking**: Overlay 預設鎖定 Base 版本或 Commit。
+- **Manual Sync Trigger**: 由工程師顯式觸發同步。
+- **Selective Sync**: 僅同步被 impact scope 命中的 Overlay 節點。
 
 ---
 
 ## 六、品質校驗 (Quality Validation)
 
-1. **結構檢核**: JSON Schema 與 ID 唯一性檢查。
-2. **語義檢核 (GraphRAG)**: 利用圖譜檢索確保跨章節邏輯的一致性，並支援視覺化校準。
-3. **多代理共識評分 (Multi-Agent Consensus)**: 使用「分析師」與「審核員」兩個獨立 Agent 對產出進行多維度評分與辯論。
-4. **審計追蹤 (Audit Rationale)**: 系統產出需求時，自動記錄引用的 PDF 座標、Prompt 版本與 Silver Dataset 參考條目，作為合規證據。
-5. **系統穩定性回歸 (Golden Test Suite)**: 每次升級 AI 邏輯後，自動執行對標測試，確保輸出一致性。
-6. **品質預警機制 (Quality Hotspot Map)**: 視覺化呈現低置信度或高退回率的規格章節。
-7. **預算控管 (Budget Cap)**: 以章節為單位預估 Token 消耗。
+1. **Schema Validation**: JSON Schema、欄位完整性與 ID 唯一性檢查。
+2. **Graph Consistency Check**: 以統一 edge taxonomy 檢查跨章節一致性與衝突。
+3. **Multi-Agent Consensus**: 以多代理評分與仲裁檢查覆蓋率、可測性與合規性。
+4. **Audit Rationale**: 保留來源座標、引用節點、Prompt 版本、模型版本與人工操作軌跡。
+5. **Golden Test Suite**: Prompt、模型或規則更新後執行回歸檢查。
+6. **Quality Hotspot Map**: 視覺化低信心、高退回率與高 impact 區塊。
+7. **Budget Control**: 追蹤各 stage token、延遲與重試成本。
 
 ---
 
-## 七、資料遷移與架構演進 (Data Evolution)
+## 七、資料演進與架構治理 (Data Evolution)
 
-確保系統升級時，歷史專案資料的可用性。
-- **Schema Versioning**: 所有資料物件皆附帶版本標籤。
-- **Auto-Migration**: 系統提供升級腳本，自動將舊格式 JSON 遷移至新版架構。
+- 所有核心物件皆須具備 `schema_version`。
+- 版本升級需提供 migration 規則與回溯策略。
+- 舊版資料若無法完整升級，必須明示降級能力與限制。
 
 ---
 
-## 八、未來展望 (Future Outlook)
+## 八、文件分層原則
 
-1. **合規閉環 (Compliance Loop)**: 自動生成 ISO 26262/21434 合規證明報告與 FMEA 映射。
-2. **多模態解析 (Multimodal Parsing)**: 自動解析 PDF 中的圖片、流程圖與狀態轉移圖。
-3. **測試閉環 (Test Feedback Loop)**: HIL/SIL 測試結果自動反向回溯。
-4. **AI 輔助檢漏**: 系統自動提示可能遺漏的需求、測試需求。
-5. **AI 輔助撰寫測試案例**: 系統依據Graph自動產出測試案例。
+本文件只定義框架與共通規則，實作細節分別由下列文件承接：
+
+- `SpecOps_State_Machine.md`
+- `SpecOps_Data_Schema.md`
+- `SpecOps_Evaluation_KPI.md`
+- `SpecOps_Integration_Codebeamer.md`
+- `SpecOps_Privacy_Audit_Policy.md`

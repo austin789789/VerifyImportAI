@@ -1,0 +1,13 @@
+{
+  "artifact_id": "R-example",
+  "source_refs": [
+    {
+      "spec_id": "S-oemx-cluster-v1_0-sec_001",
+      "page": 12,
+      "bbox": [100, 200, 400, 260]
+    }
+  ],
+  "prompt_version": "prompt-v1",
+  "model_version": "model-v1",
+  "silver_refs": []
+}

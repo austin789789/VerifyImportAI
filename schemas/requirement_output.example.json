@@ -1,0 +1,24 @@
+{
+  "id": "R-oemx-cluster-v1_0-sec_001-001",
+  "artifact_type": "requirement",
+  "schema_version": "1.0.0",
+  "status": "DRAFT",
+  "version": "v1.0",
+  "title": "Display vehicle speed in metric mode",
+  "statement": "The system shall display vehicle speed in km/h when market profile is metric.",
+  "source_spec_ids": ["S-oemx-cluster-v1_0-sec_001"],
+  "source_note_ids": ["N-oemx-cluster-v1_0-sec_001-001"],
+  "compliance": {
+    "classes": ["FSR"],
+    "asil": "B",
+    "cal": null
+  },
+  "trace": {
+    "graph_node_id": "R-oemx-cluster-v1_0-sec_001-001",
+    "downstream_test_requirement_ids": []
+  },
+  "audit_rationale_id": null,
+  "variant_scope": "base",
+  "created_at": "2026-03-31T00:00:00Z",
+  "updated_at": "2026-03-31T00:00:00Z"
+}

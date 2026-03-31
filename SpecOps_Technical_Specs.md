@@ -1,89 +1,170 @@
 # SpecOps 技術規格 (Technical Specs)
 
-> 版本: v4.4 -> v4.5  
-> 角色: 資料結構、儲存策略與圖譜定義
+> 版本: v4.6  
+> 角色: 核心資料結構、儲存策略、圖譜與技術治理
 
 ---
 
 ## 一、ID 與追蹤系統 (ID System)
 
-### ID 命名規則
-- **SPEC-ID**: `S-<品牌>-<機種>-<版本>-<區塊>`
-- **REQ-ID**: `R-<SPEC-ID>-<流水號>`
-- **TREQ-ID**: `T-<REQ-ID>-<流水號>`
+### 1. ID 命名規則
+
+- **SPEC-ID**: `S-<brand>-<program>-<spec_version>-<section_key>`
+- **NOTE-ID**: `N-<SPEC-ID>-<seq>`
+- **REQ-ID**: `R-<SPEC-ID>-<seq>`
+- **TREQ-ID**: `T-<REQ-ID>-<seq>`
+- **EDGE-ID**: `E-<source_node_id>-<edge_type>-<target_node_id>`
+- **REVIEW-ID**: `RV-<artifact_id>-<seq>`
+- **AUDIT-ID**: `AR-<artifact_id>-<seq>`
+
+### 2. 穩定性原則
+
+- `section_key` 應為穩定鍵，不可直接依賴純展示序號。
+- 變體 Overlay 預設沿用 Base artifact ID，另以 `variant_scope` 區分。
+- 被封存的 ID 不得重複使用。
 
 ---
 
 ## 二、資料架構與儲存 (Data Architecture)
 
 ### 1. 目錄結構原則
-- 版本化目錄 (v1.0, v1.1, ...)。
-- 全局索引 (`trace_map.json`) 作為導航主鍵。
 
-### 2. 資料演進與相容性 (Schema Evolution)
-- **Metadata Versioning**: 每個 JSON 文件皆需包含 `schema_version` 欄位。
-- **Audit Rationale**: 每條需求包含合規追蹤資訊（PDF 座標、Prompt 版本等）。
+- `spec/`, `note/`, `graph/`, `requirement/`, `test_requirement/`, `traceability/`, `audit/`, `integration/`, `library/`.
+- 採版本化目錄，例如 `v1.0`, `v1.1`。
+- `trace_map.json` 為全域導航索引，但不是唯一真相來源。
+
+### 2. trace_map.json 最低欄位
+
+- `artifact_id`
+- `artifact_type`
+- `upstream_ids`
+- `downstream_ids`
+- `status`
+- `version`
+- `schema_version`
+- `last_review_id`
+- `audit_rationale_id`
 
 ### 3. 版本管理機制
-- **Git Commit**: 每次審查存檔即自動 Commit。
-- **Variant Version Lock**: 在 `variant_config.json` 中紀錄鎖定的 Base Commit ID。
+
+- 審查存檔可觸發版本化快照，但 Git 不是唯一資料庫。
+- `variant_config.json` 必須記錄 Base 鎖定版本、同步策略與 override 規則。
+- 外部同步需支援 idempotent retry，避免重複建立資料。
 
 ---
 
 ## 三、圖譜與知識庫模式 (Graph & Knowledge Base)
 
-針對複雜系統關聯，採用 **Property Graph + GraphRAG** 架構。
+採用 **Property Graph + GraphRAG**。
 
-### 1. 視覺化圖譜編輯器 (Visual Editor)
-- 支援透過 GUI 介面直觀地「斷開」或「建立」需求間的關係。
+### 1. 節點類型
 
-### 2. 跨章節連線衝突處理：圖譜變更請求 (Edge Request)
-- **Problem**: 跨鎖定章節（Section A 與 Section B）的連線修改權限衝突。
-- **Mechanism**: **Pending Edge Request (核准制)**。
-    - 當工程師甲（持有 Section A 鎖）欲修改連向 Section B 的線時，系統發起 `Pending Request`。
-    - 必須由工程師乙（持有 Section B 鎖）於介面確認同意後，圖譜連線才正式更新。
-- **Ownership**: 連線 (Edge) 不單獨屬於 Source 或 Target，而是雙方共有的公共資產。
+- `SPEC_SECTION`
+- `NOTE`
+- `REQUIREMENT`
+- `TEST_REQUIREMENT`
+- `SIGNAL`
+- `VARIANT`
+- `THREAT`
+- `CONTROL`
 
-### 3. 關係定義 (Edges)
-- `DERIVES_FROM`, `DECOMPOSED_TO`, `MAPS_TO`, `SIMILAR_TO`.
+### 2. 關係定義 (Canonical Edge Taxonomy)
+
+- `DERIVES_FROM`
+- `DECOMPOSED_TO`
+- `MAPS_TO`
+- `DEPENDS_ON`
+- `CONFLICTS_WITH`
+- `SIMILAR_TO`
+- `MITIGATED_BY`
+- `OVERRIDES`
+
+### 3. Edge Request
+
+- 跨鎖定章節修改 edge 時，建立 `pending_edge_request`。
+- request 最低欄位應包含 `request_id`, `edge_id`, `requested_change`, `requester`, `target_owner`, `created_at`, `expires_at`, `status`。
+- request 超時後自動失效，不得無限懸掛。
+
+### 4. GraphRAG 檢索原則
+
+- 先以階層切片找候選 chunk，再沿 canonical edge taxonomy 擴展關聯。
+- `DEPENDS_ON` 與 `CONFLICTS_WITH` 優先用於 impact 與一致性檢查。
+- `DERIVES_FROM` 與 `DECOMPOSED_TO` 優先用於 traceability 與生成注入。
 
 ---
 
-## 四、AI 評估資產：白銀資料集 (Silver Dataset)
+## 四、Silver Dataset
 
-系統有機生長的「高質量對照組」。
+### 1. 角色定位
 
-### 1. 生命週期管理
-- **Architect Selection**: 定期由專家進行品質過濾。
-- **Validity TTL**: 設有 **3 年有效期**。
+Silver Dataset 是可注入生成流程的高品質參考資產，不是所有 `APPROVED` 條目的鏡像。
 
-### 2. 數據隱私標籤 (NDA Isolation)
-- **Visibility & Brand Isolation**: 在 Schema 中強制加入 `visibility` 與 `brand_id`。
-```json
-{
-  "source_spec": "規格原文片段",
-  "approved_req": "最終人工核准的需求內容",
-  "provenance": {
-    "project_id": "Project_A",
-    "brand_id": "OEM_X",
-    "visibility": "BRAND",
-    "expiry_date": "2029-03-31"
-  }
-}
-```
+### 2. 生命週期
+
+- `candidate`
+- `curated`
+- `active`
+- `expired`
+- `quarantined`
+- `retired`
+
+### 3. 收錄條件
+
+- 來源 artifact 必須為 `APPROVED`。
+- 通過品質閘門與隱私檢查。
+- `edit_distance`、約束保真度與術語一致性達標。
+- 通過專家抽樣精選或規則允許的自動升級。
+
+### 4. 隱私欄位
+
+- `visibility`: `GLOBAL | BRAND | PROJECT`
+- `brand_id`
+- `project_id`
+- `sensitivity_reason`
+- `expiry_date`
+- `allowed_use_cases`
 
 ---
 
 ## 五、併發處理與存取控制 (Concurrency & RBAC)
 
-### 1. 章節級悲觀鎖 (Section-level Pessimistic Locking)
-- **Lock Granularity**: 鎖定單位為單個規格章節（Section）。
-- **TTL Mechanism**: 預設租期為 **30 分鐘**。
+### 1. Section-level Pessimistic Locking
+
+- 鎖定單位為單一 Section。
+- 預設 TTL 為 30 分鐘。
+- 到期前須提醒續租。
+- 逾時後未續租者，鎖可被回收，但未提交內容不得自動視為已保存。
+
+### 2. 權限原則
+
+- Editor 可編輯本章節內容。
+- Reviewer 可執行審查與狀態轉移。
+- Architect / Admin 可執行高風險仲裁、Silver 精選與緊急解鎖。
 
 ---
 
-## 六、預算與性能監控 (Observability)
+## 六、Observability
 
-- **Token Budgeting**: 以「章節」為單位進行預算預估。
-- **Evaluation Logs**: 儲存 Multi-Agent Consensus 的評分過程與結論。
+- **Token Budgeting**: 至少以 stage 與 section 為單位追蹤。
+- **Evaluation Logs**: 保存評分過程、模型版本與仲裁結果。
+- **Job Telemetry**: 記錄 sync job、auto-fix job、integration job 的成功率、重試與耗時。
 
+---
+
+## 七、核心物件最小集合
+
+實作時至少要正式定義以下 schema：
+
+- `spec_section`
+- `note`
+- `requirement`
+- `test_requirement`
+- `graph_node`
+- `graph_edge`
+- `review_record`
+- `audit_rationale`
+- `silver_dataset_entry`
+- `variant_config`
+- `signal_mapping`
+
+詳細欄位定義由 `SpecOps_Data_Schema.md` 承接。

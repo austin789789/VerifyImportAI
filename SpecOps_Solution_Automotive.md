@@ -1,80 +1,114 @@
 # SpecOps 車載解決方案 (Automotive Solution)
 
-> 版本: v4.5  
-> 角色: 領域專屬標籤、合規與工具對接 (Plugin)
+> 版本: v4.6  
+> 角色: 車載領域專屬標籤、合規流程、Signal-Sync 與 ALM 對接
 
 ---
 
 ## 一、系統目標 (車載專項)
 
-針對車載儀表開發，利用圖譜技術 (Graph) 提升：
-- **Traceability**: 因果層級需求追蹤。
-- **Consistency**: 跨章節邏輯衝突自動偵測。
-- **Safety & Security**: 符合 ISO 26262 功能安全與 ISO 21434 道路車輛資安。
+針對車載儀表與控制系統開發，強化：
+
+- **Traceability**: 從 spec 到 requirement、test requirement、signal 與 ALM 項目之完整追蹤。
+- **Consistency**: 跨章節、跨變體、跨訊號定義的一致性檢查。
+- **Safety & Security**: 對齊 ISO 26262 與 ISO 21434 的審查與證據要求。
 
 ---
 
 ## 二、合規標籤設計 (Compliance Labels)
 
-精細化定義安全與資安相關元數據。
+### 1. ISO 26262
 
-### 1. ISO 26262 功能安全
-- `FSR`, `TSR`, `HSR`, `SSR`.
-- `ASIL`: [QM, A, B, C, D].
+- `FSR`, `TSR`, `HSR`, `SSR`
+- `ASIL`: `QM | A | B | C | D`
 
-### 2. ISO 21434 道路車輛資安
-- `CSR` (Cybersecurity Requirements).
-- `CAL`: [QM, 1, 2, 3, 4] (Cybersecurity Assurance Level).
-- **TARA/FMEA 整合**: 
-    - 在圖譜中新增 `THREAT` 節點與 `MITIGATED_BY` 關係。
-    - **Risk Re-assessment List**: 當規格變更標記為 `IMPACTED` 時，系統自動產出風險重估清單，提醒 Safety Manager 檢查失效條目。
+### 2. ISO 21434
+
+- `CSR`
+- `CAL`: `QM | 1 | 2 | 3 | 4`
+
+### 3. 掛載原則
+
+- `ASIL`, `CAL`, requirement class 掛載於 `requirement` 與 `test_requirement`。
+- `THREAT` 與 `CONTROL` 為 graph node。
+- `MITIGATED_BY` 用於 threat/control 與 requirement/control 關係。
+
+### 4. 風險重估
+
+- 當 safety/security 相關 artifact 進入 `IMPACTED` 或 `MANUAL_RECOVERY` 時，必須建立 risk re-assessment item。
 
 ---
 
 ## 三、外部訊號整合 (Signal Integration)
 
-解決「規格描述」與「底層訊號」的脫節。
+### 1. 支援格式
 
-### 1. 支持格式
-- **DBC** (CAN), **ARXML/LDF** (Ethernet/LIN).
+- `DBC` for CAN
+- `ARXML` for AUTOSAR / Ethernet related definitions
+- `LDF` for LIN
 
-### 2. 語義校準與自動同步 (Signal-Sync)
-- **Signal Glossary**: 維護 `signal_glossary.json` 對應自然語言與技術縮寫。
-- **Signal-Sync Agent**: 
-    - 當通訊矩陣變更時，AI 自動修正需求描述。
-    - **Confidence Threshold**: 系統計算修正的置信度，若 **Score < 0.6** (如涉及多對一邏輯拆分)，強制標記為 `MANUAL_RECOVERY` 待人工修復。
-- **Mapping Status**: AI 預測映射 (DRAFT) 與人工校正核准 (APPROVED)。
+### 2. Signal Glossary
+
+- 使用 `signal_glossary.json` 維護自然語言、縮寫、枚舉值與單位對應。
+
+### 3. Signal-Sync
+
+- 僅對已建立 `signal_mapping` 的 artifact 啟動。
+- 支援數值、單位、枚舉值與欄位名稱變更檢查。
+- 多對一或一對多映射為高風險場景，預設轉入 `MANUAL_RECOVERY`。
+
+### 4. Mapping Status
+
+- `DRAFT`
+- `APPROVED`
+- `STALE`
 
 ---
 
 ## 四、工具鑑定與穩定性 (Tool Qualification)
 
-確保系統符合車載開發的高可靠性要求。
+### 1. Golden Test Suite
 
-### 1. 黃金測試集 (Golden Test Suite)
-- **回歸測試**: 系統維護一組「標準規格-標準需求」的對照集 (Ground Truth)。
-- **AI Regression Check**: 每次更新系統 Prompt 或切換 LLM 模型後，自動執行回歸測試。
-- **Manual Verification**: 定期由人工審核並校正黃金測試集，確保其作為「真值」的權威性。
+- 維護標準 spec、note、requirement、signal mapping 與 expected output。
+- Prompt、模型、抽取規則或同步邏輯變更後必須執行回歸。
+- Ground truth 必須定期人工覆核。
+
+### 2. 最低評估項目
+
+- requirement extraction precision / recall
+- signal-sync exact match rate
+- safety/security false negative rate
+- auto-fix approval rate
 
 ---
 
 ## 五、車載變體實務 (Variant Implementation)
 
-管理多套硬體（Entry, Mid, High-end）開發。
-- **Common Spec**, **Variant Delta**.
-- **Version Locking**: 變體層鎖定基準層版本。
+- 採 `Base + Overlay`。
+- Overlay override 類型至少包含 `add`, `modify`, `suppress`, `rebind_signal`。
+- Base 版本變更後只同步 impacted scope。
 
 ---
 
 ## 六、ALM 整合：Codebeamer Sync
 
-### 1. 同步策略
-- 只有 `APPROVED` 狀態的需求才進入同步。
-- 同步內容包含 `ASIL/CAL` 等合規標籤與 **Audit Rationale**。
+### 1. 同步原則
+
+- 僅 `APPROVED` artifact 可同步。
+- 同步內容包含 requirement 本體、合規標籤、trace 與 audit reference。
+- 同步需支援 idempotent retry 與 partial failure recovery。
+
+### 2. Source of Truth
+
+- SpecOps 為需求生成與審查真相來源。
+- Codebeamer 為外部協作與 ALM 消費端。
+
+詳細欄位映射由 `SpecOps_Integration_Codebeamer.md` 承接。
 
 ---
 
-## 七、MinerU 車載配置 (Parsing Setup)
+## 七、Parser / MinerU 車載配置
 
-- **Layout JSON**: 捕捉表格坐標，支援回溯 PDF 原文。
-- **Table CSV**: 提取燈號矩陣與通訊定義。
+- `Layout JSON`: 保存頁面區塊與表格座標。
+- `Table CSV`: 提取燈號矩陣、診斷碼與通訊定義。
+- 對解析失真區塊應保留人工校正入口與原文回鏈。
