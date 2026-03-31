@@ -212,6 +212,21 @@ class SQLiteRepository:
             )
             """
         )
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_spec_sections_section_key ON spec_sections(section_key)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_spec_sections_status ON spec_sections(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_notes_status ON notes(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_requirements_status ON requirements(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_requirements_variant_scope ON requirements(variant_scope)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_requirements_audit_rationale_id ON requirements(audit_rationale_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_test_requirements_status ON test_requirements(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_test_requirements_audit_rationale_id ON test_requirements(audit_rationale_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_rationales_artifact_id ON audit_rationales(artifact_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_reviews_artifact_id ON reviews(artifact_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_trace_entries_artifact_type ON trace_entries(artifact_type)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_note_source_specs_spec_id ON note_source_specs(spec_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_requirement_source_specs_spec_id ON requirement_source_specs(spec_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_requirement_source_notes_note_id ON requirement_source_notes(note_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_test_requirement_sources_requirement_id ON test_requirement_sources(requirement_id)")
         self.connection.commit()
 
     def _drop_all_tables(self) -> None:

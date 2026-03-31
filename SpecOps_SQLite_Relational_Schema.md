@@ -88,6 +88,27 @@ Current tests verify:
 - relational columns exist instead of `payload`
 - legacy payload databases migrate correctly
 - link-table rows are written with the expected positions
+- query-supporting indexes are created for current lookup paths
 - `PRAGMA integrity_check` returns `ok`
 
-The next step, if needed, is to add explicit indexes and foreign key enforcement once the schema is stable enough to justify migrations with stricter constraints.
+## Current Index Baseline
+
+Current SQLite indexes are intentionally small and only cover the query paths used by the MVP repository:
+
+- `spec_sections(section_key)`
+- `spec_sections(status)`
+- `notes(status)`
+- `requirements(status)`
+- `requirements(variant_scope)`
+- `requirements(audit_rationale_id)`
+- `test_requirements(status)`
+- `test_requirements(audit_rationale_id)`
+- `audit_rationales(artifact_id)`
+- `reviews(artifact_id)`
+- `trace_entries(artifact_type)`
+- `note_source_specs(spec_id)`
+- `requirement_source_specs(spec_id)`
+- `requirement_source_notes(note_id)`
+- `test_requirement_sources(requirement_id)`
+
+The next step, if needed, is to add foreign key enforcement and then review whether composite indexes are justified by real query volume.

@@ -656,3 +656,35 @@ def test_sqlite_repository_passes_integrity_check_and_link_counts(tmp_path: Path
         assert test_requirement_links == [(test_requirement_id, requirement_id, 0)]
     finally:
         connection.close()
+
+
+def test_sqlite_repository_creates_query_indexes(tmp_path: Path) -> None:
+    db_path = tmp_path / "specops-indexes.db"
+    client = make_sqlite_client(db_path)
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+    create_test_requirement(client, requirement_id)
+
+    connection = sqlite3.connect(db_path)
+    try:
+        def index_names(table: str) -> set[str]:
+            return {row[1] for row in connection.execute(f"PRAGMA index_list({table})").fetchall()}
+
+        assert "idx_spec_sections_section_key" in index_names("spec_sections")
+        assert "idx_spec_sections_status" in index_names("spec_sections")
+        assert "idx_notes_status" in index_names("notes")
+        assert "idx_requirements_status" in index_names("requirements")
+        assert "idx_requirements_variant_scope" in index_names("requirements")
+        assert "idx_requirements_audit_rationale_id" in index_names("requirements")
+        assert "idx_test_requirements_status" in index_names("test_requirements")
+        assert "idx_test_requirements_audit_rationale_id" in index_names("test_requirements")
+        assert "idx_audit_rationales_artifact_id" in index_names("audit_rationales")
+        assert "idx_reviews_artifact_id" in index_names("reviews")
+        assert "idx_trace_entries_artifact_type" in index_names("trace_entries")
+        assert "idx_note_source_specs_spec_id" in index_names("note_source_specs")
+        assert "idx_requirement_source_specs_spec_id" in index_names("requirement_source_specs")
+        assert "idx_requirement_source_notes_note_id" in index_names("requirement_source_notes")
+        assert "idx_test_requirement_sources_requirement_id" in index_names("test_requirement_sources")
+    finally:
+        connection.close()
