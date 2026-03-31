@@ -1,6 +1,6 @@
 # SpecOps 車載解決方案 (Automotive Solution)
 
-> 版本: v4.1  
+> 版本: v4.2  
 > 角色: 領域專屬標籤、合規與工具對接 (Plugin)
 
 ---

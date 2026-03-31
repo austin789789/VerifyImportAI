@@ -1,6 +1,6 @@
 # SpecOps 核心框架 (Framework)
 
-> 版本: v4.1  
+> 版本: v4.2  
 > 角色: 核心邏輯、原則與通用流程
 
 ---
@@ -39,11 +39,11 @@
 採用 **Atomic Review（單條審查）** 模式。
 
 ### 審查狀態機 (Status Machine)
-
 - `DRAFT`: 待審查。
 - `APPROVED`: 通過審查。
-- `REJECTED`: 退回修正。
-- `FIXED`: 修正後重啟流程。
+- `REJECTED`: 退回修正。需**強制選擇結構化標籤**（如：語義錯誤、格式不符、安全合規不足）。
+- `FIXING`: 系統根據退回標籤進行 **Self-Fix (自動修正)**。
+- `FIXED`: 修正後重啟流程，待人工二次審查。
 - `IMPACTED`: 因上層變動導致失效。
 
 ---
@@ -52,9 +52,14 @@
 
 實現 **Automated Impact Analysis**。
 
+### 1. 影響分析流程
 1. **Markdown Diff**: 對比新舊版規格。
 2. **Impact Analysis**: 識別受影響的下游節點（Note, Req, Test, Signal）。
-3. **Propagation**: 自動將相關節點改為 `IMPACTED` 並高亮顯示。
+3. **Propagation**: 自動將相關節點改為 `IMPACTED`。
+
+### 2. 變體同步策略 (Variant Sync Strategy)
+- **Version Locking**: Overlay (變體層) 預設鎖定在特定的 Base (基準層) 版本。
+- **Manual Sync**: 基準層變動後，變體層不會立即更新，需由工程師手動觸發「版本同步 (Version Sync)」，以避免開發過程中的非預期震盪。
 
 ---
 
@@ -65,7 +70,8 @@
    - **Coverage Check**: 檢查 Spec 是否皆有對應需求。
    - **Conflict Detection**: 偵測邏輯矛盾與互斥。
 3. **自動化數據校驗 (Data Cross-Check)**: 自動對比需求描述與底層訊號定義 (DBC/ARXML) 是否吻合。
-4. **置信度門檻 (Confidence Gate)**: LLM 生成時需附帶置信評分，低於 `0.8` 時觸發人工高風險審查標記。
+4. **品質預警機制 (Quality Hotspot Map)**: 系統視覺化呈現低置信度 (`llm_confidence < 0.8`) 或高退回率的規格章節，引導人工重點介入。
+5. **預算控管 (Budget Cap)**: 設定專案/變體層級的 Token 消耗上限，接近閾值時自動預警。
 
 ---
 

@@ -1,6 +1,6 @@
 # SpecOps 技術規格 (Technical Specs)
 
-> 版本: v4.1  
+> 版本: v4.2  
 > 角色: 資料結構、儲存策略與圖譜定義
 
 ---
@@ -35,9 +35,9 @@
 - 全局索引 (`trace_map.json`) 作為導航主鍵。
 
 ### 2. 版本管理機制
-
 - **Git Commit**: 每次審查存檔即自動 Commit。
-- **Delta Storage**: 利用 Git Diff 特性存儲變更，方便改版對照。
+- **Delta Storage**: 利用 Git Diff 特性存儲變更。
+- **Variant Version Lock**: 在 `variant_config.json` 中紀錄目前鎖定的 Base Commit ID。
 
 ---
 
@@ -46,21 +46,10 @@
 針對複雜系統關聯，採用 Property Graph 模型。
 
 ### 1. 節點定義 (Nodes)
-
-- `Spec`: 規格原始區塊。
-- `Note`: 語義解析中繼站。
-- `Req`: 具體需求物件。
-- `Test`: 測試驗證方案。
-- `Signal`: 硬體/通訊訊號（來自 DBC/ARXML）。
-- `Data Node`: 外部參數或配置數據。
+- `Spec`, `Note`, `Req`, `Test`, `Signal`, `Data Node`.
 
 ### 2. 關係定義 (Edges)
-
-- `DERIVES_FROM`: 需求源於規格。
-- `DECOMPOSED_TO`: ASIL 分解或需求進一步拆解路徑。
-- `MAPS_TO`: 訊號數據與需求的映射。
-- `DEPENDS_ON`: 跨功能間的邏輯依賴。
-- `CONFLICTS_WITH`: 偵測邏輯矛盾。
+- `DERIVES_FROM`, `DECOMPOSED_TO`, `MAPS_TO`, `DEPENDS_ON`, `CONFLICTS_WITH`.
 
 ---
 
@@ -69,14 +58,11 @@
 除了 Markdown 文本，支援「結構化數據源」併入。
 
 ### 1. 數據入口類型
-
 - **Parameters**: JSON/CSV 參數對應表。
 - **Signal Specs**: 通訊協議定義檔 (DBC, ARXML, LDF)。
 
-### 2. 整合機制
-
-- 將外部數據映射為 **Data Node**，並建立 `LINKS_TO` 關係。
-- 數據源更新時，自動將下游受影響節點標記為 `IMPACTED`。
+### 2. 預算指標定義 (Budgeting)
+- `token_usage_limit`: 儲存於專案配置，定義總消耗預算。
 
 ---
 
@@ -85,28 +71,17 @@
 為了確保多位工程師同時審查大規模規格書時，資料不被覆蓋且符合合規性要求。
 
 ### 1. 併發處理機制 (Concurrency Control)
-
 採用 **樂觀鎖 (Optimistic Locking)** 與 **Git 分支策略**。
-
-- **Atomic File Locking**: 當用戶開啟特定 `SPEC-ID` 進行編輯時，系統在 Redis 或 Git 伺服器建立臨時 `Lock` 標記（TTL 30min），防止他人同時修改同一物件。
-- **Branch per Task**: 複雜改版建議採用「任務分支」，審查完成後再 Merge 回主版本線。
-- **Conflict Detection**: 在 `APPROVED` 存檔前，系統自動執行 `git fetch` 與 `diff`，若偵測到該 `REQ-ID` 已被他人更新，則觸發 **Merge Conflict UI**。
+- **Atomic File Locking**: 當用戶開啟特定 `SPEC-ID` 進行編輯時，系統在 Redis 或 Git 伺服器建立臨時 `Lock` 標記（TTL 30min）。
+- **Branch per Task**: 複雜改版建議採用「任務分支」。
+- **Conflict Detection**: 在 `APPROVED` 存檔前，系統自動執行 `git fetch` 與 `diff`。
 
 ### 2. 權限管理 (RBAC - Role Based Access Control)
-
-定義四種核心角色與操作權限：
-
-| 角色 | 權限能力 | 適用對象 |
-| :--- | :--- | :--- |
-| **Viewer** | 僅讀取所有追蹤鏈與原文。 | 專案經理、客戶。 |
-| **Engineer** | 建立 `DRAFT`、提交 `FIXED`、執行 `Impact Analysis`。 | 需求工程師、開發者。 |
-| **Reviewer** | 執行 `APPROVE` / `REJECT` 操作，修改 `human_opinion`。 | 資深工程師、架構師。 |
-| **Safety Manager** | 僅限操作 `FSR/TSR` 等安全標籤，簽署合規報告。 | 功能安全專家。 |
+- **Viewer**, **Engineer**, **Reviewer**, **Safety Manager**.
 
 ### 3. 資料追蹤 (Audit Trail)
-
 - 每一筆 `APPROVED` 動作皆需附加 `User ID` 與 `Timestamp`。
-- **數位簽章 (Digital Signature)**: 對於 ASIL C/D 需求，存檔時需進行數位簽章校驗，確保審查流程的法律效力。
+- **數位簽章 (Digital Signature)**: 對於 ASIL C/D 需求，存檔時需進行數位簽章校驗。
 
 ---
 
@@ -115,7 +90,6 @@
 為了解決自然語言描述與技術訊號 (DBC/ARXML) 之間的對應鴻溝，系統維護一份映射清單。
 
 ### 1. 資料格式 (`signal_glossary.json`)
-
 ```json
 {
   "project": "Project_Name",
@@ -124,17 +98,22 @@
       "nl_term": "Vehicle Speed",
       "dbc_message": "ABS_Status_01",
       "dbc_signal": "Veh_Spd_Raw",
-      "confidence": 0.98,
-      "status": "APPROVED",
-      "human_reviewer": "Engineer_A"
+      "status": "APPROVED"
     }
   ]
 }
 ```
 
-### 2. 欄位定義
+---
 
-- **nl_term**: 規格書中使用的自然語言術語。
-- **dbc_message / dbc_signal**: 對應的底層技術標識符。
-- **status**: `DRAFT` (LLM 預測) 或 `APPROVED` (人工確認)。
-- **confidence**: LLM 進行語義匹配時的置信度。
+## 七、審查反饋模式 (Review Feedback Schema)
+
+### 1. 需求物件擴展
+```json
+{
+  "req_id": "R-001",
+  "status": "REJECTED",
+  "rejection_tags": ["SEMANTIC_ERROR", "FORMAT_ERROR"],
+  "human_opinion": "..."
+}
+```
