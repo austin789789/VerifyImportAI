@@ -1,0 +1,5 @@
+{
+  "title": "Vehicle speed display note",
+  "summary": "Metric market profile requires km/h display.",
+  "source_spec_ids": ["S-oemx-cluster-v1_0-sec_001"]
+}

@@ -57,6 +57,25 @@ class SpecSection(BaseModel):
     updated_at: datetime = Field(default_factory=utc_now)
 
 
+class Note(BaseModel):
+    id: str
+    artifact_type: Literal["note"] = "note"
+    schema_version: str
+    status: ArtifactStatus = "DRAFT"
+    version: str
+    title: str
+    summary: str
+    source_spec_ids: list[str]
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
+class CreateNoteRequest(BaseModel):
+    title: str
+    summary: str
+    source_spec_ids: list[str]
+
+
 class RequirementTrace(BaseModel):
     graph_node_id: str
     downstream_test_requirement_ids: list[str] = Field(default_factory=list)

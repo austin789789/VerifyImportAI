@@ -7,10 +7,12 @@ from .models import (
     AuditRationale,
     CodebeamerExportRequest,
     CreateAuditRationaleRequest,
+    CreateNoteRequest,
     CreateRequirementRequest,
     CreateReviewRequest,
     LockConflictResponse,
     LockRequest,
+    Note,
     PatchRequirementRequest,
     Requirement,
     RequirementTrace,
@@ -25,7 +27,7 @@ def create_app(repository: Repository | None = None) -> FastAPI:
     repo = repository or default_repository
     app = FastAPI(
         title="SpecOps MVP API",
-        version="1.1.0",
+        version="1.2.0",
         summary="MVP API contract for SpecOps workflows",
     )
 
@@ -51,6 +53,33 @@ def create_app(repository: Repository | None = None) -> FastAPI:
     @app.get("/spec-sections/{spec_section_id}", response_model=SpecSection)
     def get_spec_section(spec_section_id: str, repository: Repository = Depends(get_repository)) -> SpecSection:
         return repository.get_spec_section(spec_section_id)
+
+    @app.post("/notes", response_model=Note, status_code=status.HTTP_201_CREATED)
+    def create_note(
+        request: CreateNoteRequest,
+        repository: Repository = Depends(get_repository),
+    ) -> Note:
+        note = Note(
+            id=next_id("N"),
+            schema_version="1.0.0",
+            version="v1.0",
+            title=request.title,
+            summary=request.summary,
+            source_spec_ids=request.source_spec_ids,
+        )
+        return repository.create_note(note)
+
+    @app.get("/notes", response_model=dict[str, list[Note]])
+    def list_notes(
+        status: str | None = Query(default=None),
+        source_spec_id: str | None = Query(default=None),
+        repository: Repository = Depends(get_repository),
+    ) -> dict[str, list[Note]]:
+        return {"items": repository.list_notes(status, source_spec_id)}
+
+    @app.get("/notes/{note_id}", response_model=Note)
+    def get_note(note_id: str, repository: Repository = Depends(get_repository)) -> Note:
+        return repository.get_note(note_id)
 
     @app.post("/requirements", response_model=Requirement, status_code=status.HTTP_201_CREATED)
     def create_requirement(

@@ -14,14 +14,48 @@ def make_sqlite_client(db_path: Path) -> TestClient:
     return TestClient(create_app(SQLiteRepository(db_path)))
 
 
-def create_requirement(client: TestClient) -> str:
+def create_spec_section(client: TestClient) -> str:
+    spec_section_payload = {
+        "id": "S-oemx-cluster-v1_0-sec_001",
+        "artifact_type": "spec_section",
+        "schema_version": "1.0.0",
+        "status": "DRAFT",
+        "version": "v1.0",
+        "section_key": "sec_001",
+        "title": "Vehicle Speed Display",
+        "text": "The system shall display vehicle speed in km/h when market profile is metric.",
+        "normalized_text": "The system shall display vehicle speed in km/h when market profile is metric.",
+        "parser_warnings": [],
+        "source_refs": [{"page": 12, "bbox": [100, 200, 400, 260], "table_ref": None}],
+        "created_at": "2026-03-31T00:00:00Z",
+        "updated_at": "2026-03-31T00:00:00Z",
+    }
+    spec_response = client.post("/spec-sections", json=spec_section_payload)
+    assert spec_response.status_code == 201
+    return spec_response.json()["id"]
+
+
+def create_note(client: TestClient, source_spec_id: str) -> str:
+    note_response = client.post(
+        "/notes",
+        json={
+            "title": "Vehicle speed display note",
+            "summary": "Metric market profile requires km/h display.",
+            "source_spec_ids": [source_spec_id],
+        },
+    )
+    assert note_response.status_code == 201
+    return note_response.json()["id"]
+
+
+def create_requirement(client: TestClient, source_spec_id: str, note_id: str) -> str:
     requirement_response = client.post(
         "/requirements",
         json={
             "title": "Display vehicle speed in metric mode",
             "statement": "The system shall display vehicle speed in km/h when market profile is metric.",
-            "source_spec_ids": ["S-oemx-cluster-v1_0-sec_001"],
-            "source_note_ids": ["N-oemx-cluster-v1_0-sec_001-001"],
+            "source_spec_ids": [source_spec_id],
+            "source_note_ids": [note_id],
             "compliance": {"classes": ["FSR"], "asil": "B", "cal": None},
             "variant_scope": "base",
         },
@@ -30,14 +64,14 @@ def create_requirement(client: TestClient) -> str:
     return requirement_response.json()["id"]
 
 
-def attach_audit_rationale(client: TestClient, requirement_id: str) -> str:
+def attach_audit_rationale(client: TestClient, requirement_id: str, source_spec_id: str) -> str:
     audit_response = client.post(
         "/audit-rationales",
         json={
             "artifact_id": requirement_id,
             "source_refs": [
                 {
-                    "spec_id": "S-oemx-cluster-v1_0-sec_001",
+                    "spec_id": source_spec_id,
                     "page": 12,
                     "bbox": [100, 200, 400, 260],
                 }
@@ -66,28 +100,15 @@ def test_healthcheck() -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_spec_section_requirement_review_trace_flow() -> None:
+def test_spec_note_requirement_review_trace_flow() -> None:
     client = make_memory_client()
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
 
-    spec_section_payload = {
-        "id": "S-oemx-cluster-v1_0-sec_001",
-        "artifact_type": "spec_section",
-        "schema_version": "1.0.0",
-        "status": "DRAFT",
-        "version": "v1.0",
-        "section_key": "sec_001",
-        "title": "Vehicle Speed Display",
-        "text": "The system shall display vehicle speed in km/h when market profile is metric.",
-        "normalized_text": "The system shall display vehicle speed in km/h when market profile is metric.",
-        "parser_warnings": [],
-        "source_refs": [{"page": 12, "bbox": [100, 200, 400, 260], "table_ref": None}],
-        "created_at": "2026-03-31T00:00:00Z",
-        "updated_at": "2026-03-31T00:00:00Z",
-    }
-    spec_response = client.post("/spec-sections", json=spec_section_payload)
-    assert spec_response.status_code == 201
-
-    requirement_id = create_requirement(client)
+    note_response = client.get(f"/notes/{note_id}")
+    assert note_response.status_code == 200
+    assert note_response.json()["id"] == note_id
 
     submit_response = client.post(
         f"/requirements/{requirement_id}/submit-review",
@@ -112,13 +133,16 @@ def test_spec_section_requirement_review_trace_flow() -> None:
     trace_response = client.get(f"/trace/{requirement_id}")
     assert trace_response.status_code == 200
     trace = trace_response.json()
-    assert "S-oemx-cluster-v1_0-sec_001" in trace["upstream_ids"]
+    assert spec_section_id in trace["upstream_ids"]
+    assert note_id in trace["upstream_ids"]
 
 
 def test_approve_and_export_flow() -> None:
     client = make_memory_client()
-    requirement_id = create_requirement(client)
-    audit_id = attach_audit_rationale(client, requirement_id)
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+    audit_id = attach_audit_rationale(client, requirement_id, spec_section_id)
 
     submit_response = client.post(
         f"/requirements/{requirement_id}/submit-review",
@@ -161,10 +185,16 @@ def test_lock_conflict_flow() -> None:
 def test_sqlite_repository_persists_across_app_instances(tmp_path: Path) -> None:
     db_path = tmp_path / "specops-test.db"
     client_a = make_sqlite_client(db_path)
-    requirement_id = create_requirement(client_a)
-    attach_audit_rationale(client_a, requirement_id)
+    spec_section_id = create_spec_section(client_a)
+    note_id = create_note(client_a, spec_section_id)
+    requirement_id = create_requirement(client_a, spec_section_id, note_id)
+    attach_audit_rationale(client_a, requirement_id, spec_section_id)
 
     client_b = make_sqlite_client(db_path)
+    note_response = client_b.get(f"/notes/{note_id}")
+    assert note_response.status_code == 200
+    assert note_response.json()["id"] == note_id
+
     requirement_response = client_b.get(f"/requirements/{requirement_id}")
     assert requirement_response.status_code == 200
     assert requirement_response.json()["id"] == requirement_id

@@ -13,6 +13,7 @@ from .models import (
     CodebeamerExportRequest,
     ExportJobResponse,
     LockRequest,
+    Note,
     Requirement,
     ReviewDecisionResponse,
     ReviewRecord,
@@ -34,6 +35,9 @@ class Repository(Protocol):
     def upsert_spec_section(self, section: SpecSection) -> SpecSection: ...
     def list_spec_sections(self, status_filter: str | None, section_key: str | None) -> list[SpecSection]: ...
     def get_spec_section(self, spec_section_id: str) -> SpecSection: ...
+    def create_note(self, note: Note) -> Note: ...
+    def list_notes(self, status_filter: str | None, source_spec_id: str | None) -> list[Note]: ...
+    def get_note(self, note_id: str) -> Note: ...
     def create_requirement(self, requirement: Requirement) -> Requirement: ...
     def list_requirements(self, status_filter: str | None, source_spec_id: str | None) -> list[Requirement]: ...
     def get_requirement(self, requirement_id: str) -> Requirement: ...
@@ -52,6 +56,7 @@ class Repository(Protocol):
 class InMemoryRepository:
     def __init__(self) -> None:
         self.spec_sections: dict[str, SpecSection] = {}
+        self.notes: dict[str, Note] = {}
         self.requirements: dict[str, Requirement] = {}
         self.audit_rationales: dict[str, AuditRationale] = {}
         self.reviews: dict[str, ReviewRecord] = {}
@@ -86,7 +91,40 @@ class InMemoryRepository:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spec section not found")
         return item
 
+    def create_note(self, note: Note) -> Note:
+        for source_spec_id in note.source_spec_ids:
+            if source_spec_id not in self.spec_sections:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source spec section not found")
+        self.notes[note.id] = note
+        self.trace_entries[note.id] = TraceMapEntry(
+            artifact_id=note.id,
+            artifact_type=note.artifact_type,
+            upstream_ids=note.source_spec_ids,
+            downstream_ids=[],
+            status=note.status,
+            version=note.version,
+            schema_version=note.schema_version,
+        )
+        return note
+
+    def list_notes(self, status_filter: str | None, source_spec_id: str | None) -> list[Note]:
+        items = list(self.notes.values())
+        if status_filter:
+            items = [item for item in items if item.status == status_filter]
+        if source_spec_id:
+            items = [item for item in items if source_spec_id in item.source_spec_ids]
+        return items
+
+    def get_note(self, note_id: str) -> Note:
+        item = self.notes.get(note_id)
+        if not item:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+        return item
+
     def create_requirement(self, requirement: Requirement) -> Requirement:
+        for source_note_id in requirement.source_note_ids:
+            if source_note_id not in self.notes:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source note not found")
         self.requirements[requirement.id] = requirement
         self.trace_entries[requirement.id] = TraceMapEntry(
             artifact_id=requirement.id,
@@ -225,6 +263,7 @@ class SQLiteRepository:
     def _init_db(self) -> None:
         cursor = self.connection.cursor()
         cursor.execute("CREATE TABLE IF NOT EXISTS spec_sections (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS notes (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
         cursor.execute("CREATE TABLE IF NOT EXISTS requirements (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
         cursor.execute("CREATE TABLE IF NOT EXISTS audit_rationales (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
         cursor.execute("CREATE TABLE IF NOT EXISTS reviews (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
@@ -282,7 +321,39 @@ class SQLiteRepository:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spec section not found")
         return item
 
+    def create_note(self, note: Note) -> Note:
+        for source_spec_id in note.source_spec_ids:
+            self.get_spec_section(source_spec_id)
+        self._save_model("notes", "id", note.id, note)
+        trace_entry = TraceMapEntry(
+            artifact_id=note.id,
+            artifact_type=note.artifact_type,
+            upstream_ids=note.source_spec_ids,
+            downstream_ids=[],
+            status=note.status,
+            version=note.version,
+            schema_version=note.schema_version,
+        )
+        self._save_model("trace_entries", "artifact_id", note.id, trace_entry)
+        return note
+
+    def list_notes(self, status_filter: str | None, source_spec_id: str | None) -> list[Note]:
+        items = self._load_all("notes", Note)
+        if status_filter:
+            items = [item for item in items if item.status == status_filter]
+        if source_spec_id:
+            items = [item for item in items if source_spec_id in item.source_spec_ids]
+        return items
+
+    def get_note(self, note_id: str) -> Note:
+        item = self._load_model("notes", "id", note_id, Note)
+        if not item:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+        return item
+
     def create_requirement(self, requirement: Requirement) -> Requirement:
+        for source_note_id in requirement.source_note_ids:
+            self.get_note(source_note_id)
         self._save_model("requirements", "id", requirement.id, requirement)
         trace_entry = TraceMapEntry(
             artifact_id=requirement.id,
