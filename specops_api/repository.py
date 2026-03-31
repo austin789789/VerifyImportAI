@@ -683,5 +683,7 @@ class SQLiteRepository:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only APPROVED requirements can be exported")
         return ExportJobResponse(job_id=f"export-{uuid4()}", status="QUEUED", integration_log_id=f"log-{uuid4()}")
 
+from .sqlite_repository_relational import SQLiteRepository as SQLiteRepository
+
 
 repository = SQLiteRepository()

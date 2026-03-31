@@ -1,4 +1,5 @@
 from pathlib import Path
+import sqlite3
 
 from fastapi.testclient import TestClient
 
@@ -389,3 +390,33 @@ def test_sqlite_repository_persists_across_app_instances(tmp_path: Path) -> None
     trace_response = client_b.get(f"/trace/{requirement_id}")
     assert trace_response.status_code == 200
     assert test_requirement_id in trace_response.json()["downstream_ids"]
+
+
+def test_sqlite_repository_uses_relational_tables(tmp_path: Path) -> None:
+    db_path = tmp_path / "specops-schema.db"
+    client = make_sqlite_client(db_path)
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+    create_test_requirement(client, requirement_id)
+
+    connection = sqlite3.connect(db_path)
+    try:
+        requirement_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(requirements)").fetchall()
+        }
+        assert {"id", "status", "title", "statement", "variant_scope", "audit_rationale_id"} <= requirement_columns
+        assert "payload" not in requirement_columns
+
+        source_note_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(requirement_source_notes)").fetchall()
+        }
+        assert {"requirement_id", "note_id", "position"} <= source_note_columns
+
+        review_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(reviews)").fetchall()
+        }
+        assert {"id", "artifact_id", "decision", "reviewer_id", "reviewed_at"} <= review_columns
+        assert "payload" not in review_columns
+    finally:
+        connection.close()
