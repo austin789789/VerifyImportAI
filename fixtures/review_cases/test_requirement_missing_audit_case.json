@@ -1,0 +1,63 @@
+{
+  "name": "test_requirement_approval_missing_audit",
+  "spec_section": {
+    "id": "S-review-diag-v1_2-sec_011",
+    "artifact_type": "spec_section",
+    "schema_version": "1.0.0",
+    "status": "DRAFT",
+    "version": "v1.2",
+    "section_key": "sec_011",
+    "title": "Extended Session Keepalive",
+    "text": "The ECU shall maintain extended diagnostic session only while tester present messages are received within the configured interval.",
+    "normalized_text": "The ECU shall maintain extended diagnostic session only while tester present messages are received within the configured interval.",
+    "parser_warnings": [],
+    "source_refs": [
+      {
+        "page": 65,
+        "bbox": [84, 132, 536, 214],
+        "table_ref": null
+      }
+    ],
+    "created_at": "2026-03-31T00:00:00Z",
+    "updated_at": "2026-03-31T00:00:00Z"
+  },
+  "note_request": {
+    "title": "Extended session keepalive note",
+    "summary": "Extended session persistence depends on tester present cadence.",
+    "source_spec_ids": ["S-review-diag-v1_2-sec_011"]
+  },
+  "requirement_request": {
+    "title": "Maintain extended session on tester present cadence",
+    "statement": "The ECU shall maintain extended diagnostic session only while tester present messages are received within the configured interval.",
+    "source_spec_ids": ["S-review-diag-v1_2-sec_011"],
+    "source_note_ids": ["$note.id"],
+    "compliance": {
+      "classes": ["SSR"],
+      "asil": "QM",
+      "cal": "2"
+    },
+    "variant_scope": "base"
+  },
+  "test_requirement_request": {
+    "statement": "Verify the ECU exits extended diagnostic session when tester present cadence is violated.",
+    "source_requirement_ids": ["$requirement.id"],
+    "acceptance_criteria": [
+      "Extended session remains active while tester present cadence is valid",
+      "ECU exits extended session when cadence is violated"
+    ],
+    "audit_rationale_id": null
+  },
+  "submit_review_request": {
+    "reviewer_id": "reviewer-b"
+  },
+  "review_request": {
+    "artifact_id": "$test_requirement.id",
+    "decision": "APPROVED",
+    "reviewer_id": "reviewer-b",
+    "review_note": "Should fail without audit rationale."
+  },
+  "expected": {
+    "artifact_type": "test_requirement",
+    "error": "APPROVED test requirement requires audit_rationale_id"
+  }
+}

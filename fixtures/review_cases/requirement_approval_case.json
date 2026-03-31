@@ -1,0 +1,73 @@
+{
+  "name": "requirement_approval_with_audit",
+  "spec_section": {
+    "id": "S-review-cluster-v1_0-sec_003",
+    "artifact_type": "spec_section",
+    "schema_version": "1.0.0",
+    "status": "DRAFT",
+    "version": "v1.0",
+    "section_key": "sec_003",
+    "title": "Speed Warning Threshold",
+    "text": "The cluster shall warn the driver when vehicle speed exceeds the configured threshold for more than 2 seconds.",
+    "normalized_text": "The cluster shall warn the driver when vehicle speed exceeds the configured threshold for more than 2 seconds.",
+    "parser_warnings": [],
+    "source_refs": [
+      {
+        "page": 21,
+        "bbox": [110, 180, 490, 250],
+        "table_ref": null
+      }
+    ],
+    "created_at": "2026-03-31T00:00:00Z",
+    "updated_at": "2026-03-31T00:00:00Z"
+  },
+  "note_request": {
+    "title": "Speed warning note",
+    "summary": "Driver warning depends on threshold breach duration over 2 seconds.",
+    "source_spec_ids": ["S-review-cluster-v1_0-sec_003"]
+  },
+  "requirement_request": {
+    "title": "Warn driver after threshold breach",
+    "statement": "The cluster shall warn the driver when vehicle speed exceeds the configured threshold for more than 2 seconds.",
+    "source_spec_ids": ["S-review-cluster-v1_0-sec_003"],
+    "source_note_ids": ["$note.id"],
+    "compliance": {
+      "classes": ["FSR"],
+      "asil": "B",
+      "cal": null
+    },
+    "variant_scope": "base"
+  },
+  "audit_request": {
+    "artifact_id": "$requirement.id",
+    "source_refs": [
+      {
+        "spec_id": "S-review-cluster-v1_0-sec_003",
+        "page": 21,
+        "bbox": [110, 180, 490, 250]
+      }
+    ],
+    "prompt_version": "prompt-review-v1",
+    "model_version": "model-review-v1",
+    "silver_refs": []
+  },
+  "submit_review_request": {
+    "reviewer_id": "reviewer-a",
+    "review_note": "Ready for approval."
+  },
+  "review_request": {
+    "artifact_id": "$requirement.id",
+    "decision": "APPROVED",
+    "reviewer_id": "reviewer-a",
+    "review_note": "Approved for export."
+  },
+  "export_request": {
+    "requirement_id": "$requirement.id",
+    "requested_by": "qa-user"
+  },
+  "expected": {
+    "artifact_type": "requirement",
+    "final_status": "APPROVED",
+    "export_status": "QUEUED"
+  }
+}

@@ -10,6 +10,8 @@ Current baseline:
 - `generation_cases/metric_speed_display_case.json`
 - `generation_cases/door_lock_feedback_case.json`
 - `generation_cases/diagnostic_timeout_case.json`
+- `review_cases/requirement_approval_case.json`
+- `review_cases/test_requirement_missing_audit_case.json`
 
 These fixtures are intentionally small but cover:
 
@@ -17,3 +19,4 @@ These fixtures are intentionally small but cover:
 - HMI plus controller cross-domain wording
 - table-adjacent extraction with `parser_warnings`
 - note / requirement contract regression cases built on top of stable `spec_section` samples
+- review / audit approval gates for both successful and failing flows
