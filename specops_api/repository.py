@@ -43,12 +43,14 @@ class Repository(Protocol):
     def list_requirements(self, status_filter: str | None, source_spec_id: str | None) -> list[Requirement]: ...
     def get_requirement(self, requirement_id: str) -> Requirement: ...
     def patch_requirement(self, requirement_id: str, title: str | None, statement: str | None, compliance, audit_rationale_id: str | None = None) -> Requirement: ...
+    def submit_requirement_review(self, requirement_id: str) -> Requirement: ...
     def create_test_requirement(self, test_requirement: TestRequirement) -> TestRequirement: ...
     def list_test_requirements(self, status_filter: str | None, source_requirement_id: str | None) -> list[TestRequirement]: ...
     def get_test_requirement(self, test_requirement_id: str) -> TestRequirement: ...
+    def patch_test_requirement(self, test_requirement_id: str, statement: str | None, acceptance_criteria: list[str] | None, audit_rationale_id: str | None = None) -> TestRequirement: ...
+    def submit_test_requirement_review(self, test_requirement_id: str) -> TestRequirement: ...
     def create_audit_rationale(self, audit_rationale: AuditRationale) -> AuditRationale: ...
     def get_audit_rationale(self, audit_rationale_id: str) -> AuditRationale: ...
-    def submit_requirement_review(self, requirement_id: str) -> Requirement: ...
     def create_review(self, review: ReviewRecord) -> ReviewDecisionResponse: ...
     def get_review(self, review_id: str) -> ReviewRecord: ...
     def acquire_or_renew_lock(self, section_key: str, request: LockRequest) -> SectionLock: ...
@@ -185,11 +187,22 @@ class InMemoryRepository:
         self.trace_entries[requirement_id] = trace_entry
         return item
 
+    def submit_requirement_review(self, requirement_id: str) -> Requirement:
+        item = self.get_requirement(requirement_id)
+        if item.status != "DRAFT":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only DRAFT requirement can enter review")
+        item.status = "IN_REVIEW"
+        item.updated_at = utc_now()
+        self.trace_entries[requirement_id].status = item.status
+        return item
+
     def create_test_requirement(self, test_requirement: TestRequirement) -> TestRequirement:
         for source_requirement_id in test_requirement.source_requirement_ids:
             requirement = self.requirements.get(source_requirement_id)
             if not requirement:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source requirement not found")
+        if test_requirement.audit_rationale_id is not None and test_requirement.audit_rationale_id not in self.audit_rationales:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Audit rationale not found")
         self.test_requirements[test_requirement.id] = test_requirement
         self.trace_entries[test_requirement.id] = TraceMapEntry(
             artifact_id=test_requirement.id,
@@ -222,6 +235,40 @@ class InMemoryRepository:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test requirement not found")
         return item
 
+    def patch_test_requirement(
+        self,
+        test_requirement_id: str,
+        statement: str | None,
+        acceptance_criteria: list[str] | None,
+        audit_rationale_id: str | None = None,
+    ) -> TestRequirement:
+        item = self.get_test_requirement(test_requirement_id)
+        if item.status == "APPROVED":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="APPROVED test requirement cannot be patched")
+        if statement is not None:
+            item.statement = statement
+        if acceptance_criteria is not None:
+            item.acceptance_criteria = acceptance_criteria
+        if audit_rationale_id is not None:
+            if audit_rationale_id not in self.audit_rationales:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Audit rationale not found")
+            item.audit_rationale_id = audit_rationale_id
+        item.updated_at = utc_now()
+        trace_entry = self.trace_entries[test_requirement_id]
+        trace_entry.status = item.status
+        trace_entry.audit_rationale_id = item.audit_rationale_id
+        self.trace_entries[test_requirement_id] = trace_entry
+        return item
+
+    def submit_test_requirement_review(self, test_requirement_id: str) -> TestRequirement:
+        item = self.get_test_requirement(test_requirement_id)
+        if item.status != "DRAFT":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only DRAFT test requirement can enter review")
+        item.status = "IN_REVIEW"
+        item.updated_at = utc_now()
+        self.trace_entries[test_requirement_id].status = item.status
+        return item
+
     def create_audit_rationale(self, audit_rationale: AuditRationale) -> AuditRationale:
         if audit_rationale.artifact_id not in self.requirements and audit_rationale.artifact_id not in self.test_requirements:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found for audit rationale")
@@ -234,29 +281,34 @@ class InMemoryRepository:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Audit rationale not found")
         return item
 
-    def submit_requirement_review(self, requirement_id: str) -> Requirement:
-        item = self.get_requirement(requirement_id)
-        if item.status != "DRAFT":
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only DRAFT requirement can enter review")
-        item.status = "IN_REVIEW"
-        item.updated_at = utc_now()
-        self.trace_entries[requirement_id].status = item.status
-        return item
-
     def create_review(self, review: ReviewRecord) -> ReviewDecisionResponse:
-        item = self.get_requirement(review.artifact_id)
-        if item.status != "IN_REVIEW":
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Requirement must be IN_REVIEW")
-        if review.decision == "APPROVED" and not item.audit_rationale_id:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="APPROVED requirement requires audit_rationale_id")
-        item.status = review.decision
-        item.updated_at = utc_now()
+        requirement = self.requirements.get(review.artifact_id)
+        if requirement:
+            if requirement.status != "IN_REVIEW":
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Requirement must be IN_REVIEW")
+            if review.decision == "APPROVED" and not requirement.audit_rationale_id:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="APPROVED requirement requires audit_rationale_id")
+            requirement.status = review.decision
+            requirement.updated_at = utc_now()
+            artifact: Requirement | TestRequirement = requirement
+        else:
+            test_requirement = self.test_requirements.get(review.artifact_id)
+            if not test_requirement:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review target not found")
+            if test_requirement.status != "IN_REVIEW":
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Test requirement must be IN_REVIEW")
+            if review.decision == "APPROVED" and not test_requirement.audit_rationale_id:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="APPROVED test requirement requires audit_rationale_id")
+            test_requirement.status = review.decision
+            test_requirement.updated_at = utc_now()
+            artifact = test_requirement
+
         self.reviews[review.id] = review
         trace = self.trace_entries[review.artifact_id]
-        trace.status = item.status
+        trace.status = artifact.status
         trace.last_review_id = review.id
-        trace.audit_rationale_id = item.audit_rationale_id
-        return ReviewDecisionResponse(review=review, artifact=item)
+        trace.audit_rationale_id = artifact.audit_rationale_id
+        return ReviewDecisionResponse(review=review, artifact=artifact)
 
     def get_review(self, review_id: str) -> ReviewRecord:
         item = self.reviews.get(review_id)
@@ -456,6 +508,18 @@ class SQLiteRepository:
         self._save_model("trace_entries", "artifact_id", requirement_id, trace)
         return item
 
+    def submit_requirement_review(self, requirement_id: str) -> Requirement:
+        item = self.get_requirement(requirement_id)
+        if item.status != "DRAFT":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only DRAFT requirement can enter review")
+        item.status = "IN_REVIEW"
+        item.updated_at = utc_now()
+        self._save_model("requirements", "id", requirement_id, item)
+        trace = self.get_trace(requirement_id)
+        trace.status = item.status
+        self._save_model("trace_entries", "artifact_id", requirement_id, trace)
+        return item
+
     def create_test_requirement(self, test_requirement: TestRequirement) -> TestRequirement:
         for source_requirement_id in test_requirement.source_requirement_ids:
             requirement = self.get_requirement(source_requirement_id)
@@ -465,6 +529,8 @@ class SQLiteRepository:
                 trace = self.get_trace(requirement.id)
                 trace.downstream_ids = requirement.trace.downstream_test_requirement_ids
                 self._save_model("trace_entries", "artifact_id", requirement.id, trace)
+        if test_requirement.audit_rationale_id is not None and not self._load_model("audit_rationales", "id", test_requirement.audit_rationale_id, AuditRationale):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Audit rationale not found")
         self._save_model("test_requirements", "id", test_requirement.id, test_requirement)
         trace_entry = TraceMapEntry(
             artifact_id=test_requirement.id,
@@ -493,6 +559,44 @@ class SQLiteRepository:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test requirement not found")
         return item
 
+    def patch_test_requirement(
+        self,
+        test_requirement_id: str,
+        statement: str | None,
+        acceptance_criteria: list[str] | None,
+        audit_rationale_id: str | None = None,
+    ) -> TestRequirement:
+        item = self.get_test_requirement(test_requirement_id)
+        if item.status == "APPROVED":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="APPROVED test requirement cannot be patched")
+        if statement is not None:
+            item.statement = statement
+        if acceptance_criteria is not None:
+            item.acceptance_criteria = acceptance_criteria
+        if audit_rationale_id is not None:
+            if not self._load_model("audit_rationales", "id", audit_rationale_id, AuditRationale):
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Audit rationale not found")
+            item.audit_rationale_id = audit_rationale_id
+        item.updated_at = utc_now()
+        self._save_model("test_requirements", "id", test_requirement_id, item)
+        trace = self.get_trace(test_requirement_id)
+        trace.status = item.status
+        trace.audit_rationale_id = item.audit_rationale_id
+        self._save_model("trace_entries", "artifact_id", test_requirement_id, trace)
+        return item
+
+    def submit_test_requirement_review(self, test_requirement_id: str) -> TestRequirement:
+        item = self.get_test_requirement(test_requirement_id)
+        if item.status != "DRAFT":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only DRAFT test requirement can enter review")
+        item.status = "IN_REVIEW"
+        item.updated_at = utc_now()
+        self._save_model("test_requirements", "id", test_requirement_id, item)
+        trace = self.get_trace(test_requirement_id)
+        trace.status = item.status
+        self._save_model("trace_entries", "artifact_id", test_requirement_id, trace)
+        return item
+
     def create_audit_rationale(self, audit_rationale: AuditRationale) -> AuditRationale:
         if (
             not self._load_model("requirements", "id", audit_rationale.artifact_id, Requirement)
@@ -508,34 +612,37 @@ class SQLiteRepository:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Audit rationale not found")
         return item
 
-    def submit_requirement_review(self, requirement_id: str) -> Requirement:
-        item = self.get_requirement(requirement_id)
-        if item.status != "DRAFT":
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only DRAFT requirement can enter review")
-        item.status = "IN_REVIEW"
-        item.updated_at = utc_now()
-        self._save_model("requirements", "id", requirement_id, item)
-        trace = self.get_trace(requirement_id)
-        trace.status = item.status
-        self._save_model("trace_entries", "artifact_id", requirement_id, trace)
-        return item
-
     def create_review(self, review: ReviewRecord) -> ReviewDecisionResponse:
-        item = self.get_requirement(review.artifact_id)
-        if item.status != "IN_REVIEW":
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Requirement must be IN_REVIEW")
-        if review.decision == "APPROVED" and not item.audit_rationale_id:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="APPROVED requirement requires audit_rationale_id")
-        item.status = review.decision
-        item.updated_at = utc_now()
-        self._save_model("requirements", "id", item.id, item)
+        requirement = self._load_model("requirements", "id", review.artifact_id, Requirement)
+        if requirement:
+            if requirement.status != "IN_REVIEW":
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Requirement must be IN_REVIEW")
+            if review.decision == "APPROVED" and not requirement.audit_rationale_id:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="APPROVED requirement requires audit_rationale_id")
+            requirement.status = review.decision
+            requirement.updated_at = utc_now()
+            self._save_model("requirements", "id", requirement.id, requirement)
+            artifact: Requirement | TestRequirement = requirement
+        else:
+            test_requirement = self._load_model("test_requirements", "id", review.artifact_id, TestRequirement)
+            if not test_requirement:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review target not found")
+            if test_requirement.status != "IN_REVIEW":
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Test requirement must be IN_REVIEW")
+            if review.decision == "APPROVED" and not test_requirement.audit_rationale_id:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="APPROVED test requirement requires audit_rationale_id")
+            test_requirement.status = review.decision
+            test_requirement.updated_at = utc_now()
+            self._save_model("test_requirements", "id", test_requirement.id, test_requirement)
+            artifact = test_requirement
+
         self._save_model("reviews", "id", review.id, review)
         trace = self.get_trace(review.artifact_id)
-        trace.status = item.status
+        trace.status = artifact.status
         trace.last_review_id = review.id
-        trace.audit_rationale_id = item.audit_rationale_id
+        trace.audit_rationale_id = artifact.audit_rationale_id
         self._save_model("trace_entries", "artifact_id", review.artifact_id, trace)
-        return ReviewDecisionResponse(review=review, artifact=item)
+        return ReviewDecisionResponse(review=review, artifact=artifact)
 
     def get_review(self, review_id: str) -> ReviewRecord:
         item = self._load_model("reviews", "id", review_id, ReviewRecord)

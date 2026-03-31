@@ -16,6 +16,7 @@ from .models import (
     LockRequest,
     Note,
     PatchRequirementRequest,
+    PatchTestRequirementRequest,
     Requirement,
     RequirementTrace,
     ReviewRecord,
@@ -30,7 +31,7 @@ def create_app(repository: Repository | None = None) -> FastAPI:
     repo = repository or default_repository
     app = FastAPI(
         title="SpecOps MVP API",
-        version="1.4.0",
+        version="1.5.0",
         summary="MVP API contract for SpecOps workflows",
     )
 
@@ -153,6 +154,15 @@ def create_app(repository: Repository | None = None) -> FastAPI:
             request.audit_rationale_id,
         )
 
+    @app.post("/requirements/{requirement_id}/submit-review", response_model=Requirement)
+    def submit_requirement_review(
+        requirement_id: str,
+        request: SubmitReviewRequest,
+        repository: Repository = Depends(get_repository),
+    ) -> Requirement:
+        _ = request
+        return repository.submit_requirement_review(requirement_id)
+
     @app.post("/test-requirements", response_model=TestRequirement, status_code=status.HTTP_201_CREATED)
     def create_test_requirement(
         request: CreateTestRequirementRequest,
@@ -184,6 +194,28 @@ def create_app(repository: Repository | None = None) -> FastAPI:
     ) -> TestRequirement:
         return repository.get_test_requirement(test_requirement_id)
 
+    @app.patch("/test-requirements/{test_requirement_id}", response_model=TestRequirement)
+    def patch_test_requirement(
+        test_requirement_id: str,
+        request: PatchTestRequirementRequest,
+        repository: Repository = Depends(get_repository),
+    ) -> TestRequirement:
+        return repository.patch_test_requirement(
+            test_requirement_id,
+            request.statement,
+            request.acceptance_criteria,
+            request.audit_rationale_id,
+        )
+
+    @app.post("/test-requirements/{test_requirement_id}/submit-review", response_model=TestRequirement)
+    def submit_test_requirement_review(
+        test_requirement_id: str,
+        request: SubmitReviewRequest,
+        repository: Repository = Depends(get_repository),
+    ) -> TestRequirement:
+        _ = request
+        return repository.submit_test_requirement_review(test_requirement_id)
+
     @app.post("/audit-rationales", response_model=AuditRationale, status_code=status.HTTP_201_CREATED)
     def create_audit_rationale(
         request: CreateAuditRationaleRequest,
@@ -205,15 +237,6 @@ def create_app(repository: Repository | None = None) -> FastAPI:
         repository: Repository = Depends(get_repository),
     ) -> AuditRationale:
         return repository.get_audit_rationale(audit_rationale_id)
-
-    @app.post("/requirements/{requirement_id}/submit-review", response_model=Requirement)
-    def submit_requirement_review(
-        requirement_id: str,
-        request: SubmitReviewRequest,
-        repository: Repository = Depends(get_repository),
-    ) -> Requirement:
-        _ = request
-        return repository.submit_requirement_review(requirement_id)
 
     @app.post("/reviews", status_code=status.HTTP_201_CREATED)
     def create_review(

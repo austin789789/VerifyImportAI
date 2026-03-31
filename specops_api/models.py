@@ -144,11 +144,23 @@ class TestRequirement(BaseModel):
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
 
+    @model_validator(mode="after")
+    def validate_approved_test_requirement(self) -> "TestRequirement":
+        if self.status == "APPROVED" and not self.audit_rationale_id:
+            raise ValueError("APPROVED test requirement must include audit_rationale_id")
+        return self
+
 
 class CreateTestRequirementRequest(BaseModel):
     statement: str
     source_requirement_ids: list[str]
     acceptance_criteria: list[str] = Field(default_factory=list)
+    audit_rationale_id: str | None = None
+
+
+class PatchTestRequirementRequest(BaseModel):
+    statement: str | None = None
+    acceptance_criteria: list[str] | None = None
     audit_rationale_id: str | None = None
 
 
@@ -215,7 +227,7 @@ class CreateReviewRequest(BaseModel):
 
 class ReviewDecisionResponse(BaseModel):
     review: ReviewRecord
-    artifact: Requirement
+    artifact: Requirement | TestRequirement
 
 
 class SectionLock(BaseModel):

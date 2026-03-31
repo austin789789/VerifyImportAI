@@ -311,6 +311,68 @@ paths:
                 $ref: '#/components/schemas/TestRequirement'
         '404':
           $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Test Requirements]
+      summary: Update editable fields of a non-approved test requirement
+      operationId: patchTestRequirement
+      parameters:
+        - in: path
+          name: testRequirementId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchTestRequirementRequest'
+      responses:
+        '200':
+          description: Test requirement updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestRequirement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Test requirement cannot be patched in current state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /test-requirements/{testRequirementId}/submit-review:
+    post:
+      tags: [Test Requirements]
+      summary: Submit a test requirement for review
+      operationId: submitTestRequirementReview
+      parameters:
+        - in: path
+          name: testRequirementId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitReviewRequest'
+      responses:
+        '200':
+          description: Test requirement moved to IN_REVIEW
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestRequirement'
+        '409':
+          description: Invalid state transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /audit-rationales:
     post:
@@ -499,7 +561,7 @@ paths:
             schema:
               $ref: '#/components/schemas/CodebeamerExportRequest'
       responses:
-        '202':
+        '200':
           description: Export job accepted
           content:
             application/json:
@@ -915,6 +977,22 @@ components:
             - string
             - 'null'
 
+    PatchTestRequirementRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        statement:
+          type: string
+        acceptance_criteria:
+          type: array
+          items:
+            type: string
+        audit_rationale_id:
+          type:
+            - string
+            - 'null'
+
     AuditSourceRef:
       type: object
       additionalProperties: false
@@ -1072,7 +1150,9 @@ components:
         review:
           $ref: '#/components/schemas/ReviewRecord'
         artifact:
-          $ref: '#/components/schemas/Requirement'
+          oneOf:
+            - $ref: '#/components/schemas/Requirement'
+            - $ref: '#/components/schemas/TestRequirement'
 
     LockRequest:
       type: object

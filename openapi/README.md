@@ -12,8 +12,8 @@ This API currently covers the SpecOps MVP core plus the minimum audit path requi
 
 - parsed spec sections
 - note creation and lookup
-- requirement draft creation and patching
-- test requirement creation and lookup
+- requirement draft creation, patching, and review
+- test requirement creation, patching, and review
 - audit rationale creation and lookup
 - review submission and review decisions
 - section locking
@@ -49,11 +49,13 @@ pytest
 - `GET /notes/{noteId}`
 - `POST /requirements`
 - `PATCH /requirements/{requirementId}`
+- `POST /requirements/{requirementId}/submit-review`
 - `POST /test-requirements`
+- `PATCH /test-requirements/{testRequirementId}`
+- `POST /test-requirements/{testRequirementId}/submit-review`
 - `GET /test-requirements/{testRequirementId}`
 - `POST /audit-rationales`
 - `GET /audit-rationales/{auditRationaleId}`
-- `POST /requirements/{requirementId}/submit-review`
 - `POST /reviews`
 - `POST /locks/{sectionKey}`
 - `GET /trace/{artifactId}`
@@ -64,4 +66,5 @@ pytest
 - Default persistence is now SQLite via `specops.db`.
 - Tests use both in-memory and temp SQLite repositories.
 - Error responses are normalized to `{ error, detail }` except lock conflicts, which additionally include `current_lock`.
+- Review decisions now support both `requirement` and `test_requirement` artifacts.
 - The repository boundary keeps future Postgres migration isolated from route handlers.

@@ -1,0 +1,27 @@
+{
+  "review": {
+    "id": "RV-example",
+    "artifact_id": "T-example",
+    "decision": "APPROVED",
+    "reviewer_id": "reviewer-a",
+    "rejection_tags": [],
+    "review_note": "Approved test requirement.",
+    "reviewed_at": "2026-03-31T00:00:00Z"
+  },
+  "artifact": {
+    "id": "T-example",
+    "artifact_type": "test_requirement",
+    "schema_version": "1.0.0",
+    "status": "APPROVED",
+    "version": "v1.0",
+    "statement": "Verify speed is shown in km/h under metric market profile.",
+    "source_requirement_ids": ["R-example"],
+    "acceptance_criteria": [
+      "Display unit is km/h",
+      "Displayed value matches input signal tolerance"
+    ],
+    "audit_rationale_id": "AR-example",
+    "created_at": "2026-03-31T00:00:00Z",
+    "updated_at": "2026-03-31T00:00:00Z"
+  }
+}

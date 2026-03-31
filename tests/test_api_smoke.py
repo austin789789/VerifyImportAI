@@ -108,6 +108,13 @@ def attach_audit_rationale(client: TestClient, artifact_id: str, source_spec_id:
         )
         assert patch_response.status_code == 200
         assert patch_response.json()["audit_rationale_id"] == audit_id
+    elif artifact_id.startswith("T-"):
+        patch_response = client.patch(
+            f"/test-requirements/{artifact_id}",
+            json={"audit_rationale_id": audit_id},
+        )
+        assert patch_response.status_code == 200
+        assert patch_response.json()["audit_rationale_id"] == audit_id
     return audit_id
 
 
@@ -175,6 +182,36 @@ def test_requirement_to_test_requirement_trace_flow() -> None:
     assert requirement_id in test_requirement_trace_response.json()["upstream_ids"]
 
 
+def test_test_requirement_review_and_approval_flow() -> None:
+    client = make_memory_client()
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+    test_requirement_id = create_test_requirement(client, requirement_id)
+    audit_id = attach_audit_rationale(client, test_requirement_id, spec_section_id)
+
+    submit_response = client.post(
+        f"/test-requirements/{test_requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a"},
+    )
+    assert submit_response.status_code == 200
+    assert submit_response.json()["status"] == "IN_REVIEW"
+
+    approve_response = client.post(
+        "/reviews",
+        json={
+            "artifact_id": test_requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Approved test requirement.",
+        },
+    )
+    assert approve_response.status_code == 201
+    assert approve_response.json()["artifact"]["status"] == "APPROVED"
+    assert approve_response.json()["artifact"]["audit_rationale_id"] == audit_id
+    assert approve_response.json()["artifact"]["artifact_type"] == "test_requirement"
+
+
 def test_approve_and_export_flow() -> None:
     client = make_memory_client()
     spec_section_id = create_spec_section(client)
@@ -233,6 +270,35 @@ def test_invalid_approve_without_audit_returns_error_response() -> None:
     assert approve_response.status_code == 409
     assert approve_response.json() == {
         "error": "APPROVED requirement requires audit_rationale_id",
+        "detail": None,
+    }
+
+
+def test_invalid_test_requirement_approve_without_audit_returns_error_response() -> None:
+    client = make_memory_client()
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+    test_requirement_id = create_test_requirement(client, requirement_id)
+
+    submit_response = client.post(
+        f"/test-requirements/{test_requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a"},
+    )
+    assert submit_response.status_code == 200
+
+    approve_response = client.post(
+        "/reviews",
+        json={
+            "artifact_id": test_requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Should fail without audit rationale.",
+        },
+    )
+    assert approve_response.status_code == 409
+    assert approve_response.json() == {
+        "error": "APPROVED test requirement requires audit_rationale_id",
         "detail": None,
     }
 
@@ -305,6 +371,7 @@ def test_sqlite_repository_persists_across_app_instances(tmp_path: Path) -> None
     requirement_id = create_requirement(client_a, spec_section_id, note_id)
     test_requirement_id = create_test_requirement(client_a, requirement_id)
     attach_audit_rationale(client_a, requirement_id, spec_section_id)
+    attach_audit_rationale(client_a, test_requirement_id, spec_section_id)
 
     client_b = make_sqlite_client(db_path)
     note_response = client_b.get(f"/notes/{note_id}")
