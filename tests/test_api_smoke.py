@@ -72,7 +72,7 @@ def create_test_requirement(client: TestClient, requirement_id: str) -> str:
             "source_requirement_ids": [requirement_id],
             "acceptance_criteria": [
                 "Display unit is km/h",
-                "Displayed value matches input signal tolerance"
+                "Displayed value matches input signal tolerance",
             ],
             "audit_rationale_id": None,
         },
@@ -209,6 +209,75 @@ def test_approve_and_export_flow() -> None:
     assert export_response.json()["status"] == "QUEUED"
 
 
+def test_invalid_approve_without_audit_returns_error_response() -> None:
+    client = make_memory_client()
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+
+    submit_response = client.post(
+        f"/requirements/{requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a"},
+    )
+    assert submit_response.status_code == 200
+
+    approve_response = client.post(
+        "/reviews",
+        json={
+            "artifact_id": requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Should fail without audit rationale.",
+        },
+    )
+    assert approve_response.status_code == 409
+    assert approve_response.json() == {
+        "error": "APPROVED requirement requires audit_rationale_id",
+        "detail": None,
+    }
+
+
+def test_invalid_requirement_creation_without_note_returns_error_response() -> None:
+    client = make_memory_client()
+    spec_section_id = create_spec_section(client)
+
+    response = client.post(
+        "/requirements",
+        json={
+            "title": "Invalid requirement",
+            "statement": "This should fail because note is missing.",
+            "source_spec_ids": [spec_section_id],
+            "source_note_ids": ["N-missing"],
+            "compliance": {"classes": [], "asil": None, "cal": None},
+            "variant_scope": "base",
+        },
+    )
+    assert response.status_code == 404
+    assert response.json() == {"error": "Source note not found", "detail": None}
+
+
+def test_review_queue_and_note_filter_listing() -> None:
+    client = make_memory_client()
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+
+    note_list_response = client.get(f"/notes?source_spec_id={spec_section_id}")
+    assert note_list_response.status_code == 200
+    assert note_list_response.json()["items"][0]["id"] == note_id
+
+    submit_response = client.post(
+        f"/requirements/{requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a"},
+    )
+    assert submit_response.status_code == 200
+
+    pending_review_response = client.get("/requirements?review_queue=pending_review")
+    assert pending_review_response.status_code == 200
+    ids = [item["id"] for item in pending_review_response.json()["items"]]
+    assert requirement_id in ids
+
+
 def test_lock_conflict_flow() -> None:
     client = make_memory_client()
 
@@ -218,6 +287,14 @@ def test_lock_conflict_flow() -> None:
     second = client.post("/locks/sec_001", json={"owner_id": "user-b", "ttl_minutes": 30})
     assert second.status_code == 409
     assert second.json()["error"] == "Lock conflict"
+    assert second.json()["current_lock"]["owner_id"] == "user-a"
+
+
+def test_missing_trace_returns_error_response() -> None:
+    client = make_memory_client()
+    response = client.get("/trace/does-not-exist")
+    assert response.status_code == 404
+    assert response.json() == {"error": "Trace entry not found", "detail": None}
 
 
 def test_sqlite_repository_persists_across_app_instances(tmp_path: Path) -> None:

@@ -3,7 +3,7 @@
 ## Files
 
 - `specops-api.yaml`: source-of-truth MVP API contract
-- `examples/`: request examples for key MVP endpoints
+- `examples/`: request and response examples for key MVP endpoints
 - `../schemas/`: JSON schema drafts for artifact payloads
 
 ## Scope
@@ -62,5 +62,6 @@ pytest
 ## Design Notes
 
 - Default persistence is now SQLite via `specops.db`.
-- Tests still use in-memory and temp SQLite repositories for fast verification.
+- Tests use both in-memory and temp SQLite repositories.
+- Error responses are normalized to `{ error, detail }` except lock conflicts, which additionally include `current_lock`.
 - The repository boundary keeps future Postgres migration isolated from route handlers.

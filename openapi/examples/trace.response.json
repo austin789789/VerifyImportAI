@@ -1,0 +1,11 @@
+{
+  "artifact_id": "R-example",
+  "artifact_type": "requirement",
+  "upstream_ids": ["S-example", "N-example"],
+  "downstream_ids": ["T-example"],
+  "status": "APPROVED",
+  "version": "v1.0",
+  "schema_version": "1.0.0",
+  "last_review_id": "RV-example",
+  "audit_rationale_id": "AR-example"
+}

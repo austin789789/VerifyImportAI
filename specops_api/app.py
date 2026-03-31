@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from .models import (
@@ -11,6 +11,7 @@ from .models import (
     CreateRequirementRequest,
     CreateReviewRequest,
     CreateTestRequirementRequest,
+    ErrorResponse,
     LockConflictResponse,
     LockRequest,
     Note,
@@ -29,12 +30,28 @@ def create_app(repository: Repository | None = None) -> FastAPI:
     repo = repository or default_repository
     app = FastAPI(
         title="SpecOps MVP API",
-        version="1.3.0",
+        version="1.4.0",
         summary="MVP API contract for SpecOps workflows",
     )
 
     def get_repository() -> Repository:
         return repo
+
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+        if exc.status_code == status.HTTP_409_CONFLICT and isinstance(exc.detail, dict) and "current_lock" in exc.detail:
+            return JSONResponse(status_code=409, content=LockConflictResponse(**exc.detail).model_dump(mode="json"))
+
+        detail_value = exc.detail
+        if isinstance(detail_value, dict):
+            error = str(detail_value.get("error", "Request failed"))
+            detail = None if "current_lock" in detail_value else str(detail_value.get("detail")) if detail_value.get("detail") is not None else None
+        else:
+            error = str(detail_value)
+            detail = None
+
+        payload = ErrorResponse(error=error, detail=detail)
+        return JSONResponse(status_code=exc.status_code, content=payload.model_dump(mode="json"))
 
     @app.get("/health")
     def healthcheck() -> dict[str, str]:
@@ -223,13 +240,7 @@ def create_app(repository: Repository | None = None) -> FastAPI:
         request: LockRequest,
         repository: Repository = Depends(get_repository),
     ):
-        try:
-            return repository.acquire_or_renew_lock(section_key, request)
-        except HTTPException as exc:
-            if exc.status_code == status.HTTP_409_CONFLICT and isinstance(exc.detail, dict):
-                payload = LockConflictResponse(**exc.detail)
-                return JSONResponse(status_code=409, content=payload.model_dump(mode="json"))
-            raise
+        return repository.acquire_or_renew_lock(section_key, request)
 
     @app.delete("/locks/{section_key}", status_code=status.HTTP_204_NO_CONTENT)
     def release_lock(
