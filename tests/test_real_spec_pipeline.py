@@ -370,3 +370,83 @@ def test_real_spec_pipeline_persists_across_sqlite_app_instances(tmp_path: Path)
     assert section_id in trace["upstream_ids"]
     assert note_id in trace["upstream_ids"]
     assert trace["audit_rationale_id"] == audit_id
+
+
+def test_kawasaki_real_spec_pipeline_persists_and_generates_downstream_artifacts_in_sqlite(tmp_path: Path) -> None:
+    db_path = tmp_path / "kawasaki-real-spec-pipeline.db"
+    client_a = make_sqlite_client(db_path)
+
+    extract_response = client_a.post(
+        "/pipelines/markdown-specs/extract",
+        json={
+            "document_id": "kawasaki-global-req",
+            "markdown_path": str(KAWASAKI_SPEC_PATH),
+        },
+    )
+    assert extract_response.status_code == 201
+
+    section_id = "S-kawasaki-global-req-sec_001"
+    bundle_response = client_a.post(
+        f"/pipelines/spec-sections/{section_id}/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+    assert bundle_response.status_code == 201
+    payload = bundle_response.json()
+
+    requirement_id = payload["requirement"]["id"]
+    note_id = payload["note"]["id"]
+    audit_id = payload["audit_rationale"]["id"]
+
+    submit_response = client_a.post(
+        f"/requirements/{requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a"},
+    )
+    assert submit_response.status_code == 200
+
+    approve_response = client_a.post(
+        "/reviews",
+        json={
+            "artifact_id": requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Approved from Kawasaki sqlite pipeline.",
+        },
+    )
+    assert approve_response.status_code == 201
+
+    generate_response = client_a.post(f"/requirements/{requirement_id}/generate-test-requirement")
+    assert generate_response.status_code == 201
+    test_requirement_id = generate_response.json()["id"]
+
+    client_b = make_sqlite_client(db_path)
+
+    note_response = client_b.get(f"/notes/{note_id}")
+    assert note_response.status_code == 200
+    assert note_response.json()["source_spec_ids"] == [section_id]
+
+    requirement_response = client_b.get(f"/requirements/{requirement_id}")
+    assert requirement_response.status_code == 200
+    assert requirement_response.json()["status"] == "APPROVED"
+    assert requirement_response.json()["audit_rationale_id"] == audit_id
+
+    audit_response = client_b.get(f"/audit-rationales/{audit_id}")
+    assert audit_response.status_code == 200
+    assert audit_response.json()["source_refs"][0]["spec_id"] == section_id
+    assert audit_response.json()["source_refs"][0]["page"] == 1
+
+    test_requirement_response = client_b.get(f"/test-requirements/{test_requirement_id}")
+    assert test_requirement_response.status_code == 200
+    assert test_requirement_response.json()["source_requirement_ids"] == [requirement_id]
+    assert "テストスペック49245-1528を満足すること" in test_requirement_response.json()["statement"]
+
+    requirement_trace = client_b.get(f"/trace/{requirement_id}")
+    assert requirement_trace.status_code == 200
+    trace = requirement_trace.json()
+    assert note_id in trace["upstream_ids"]
+    assert section_id in trace["upstream_ids"]
+    assert test_requirement_id in trace["downstream_ids"]
+    assert trace["audit_rationale_id"] == audit_id

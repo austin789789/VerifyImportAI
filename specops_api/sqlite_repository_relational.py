@@ -28,6 +28,26 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def next_id(prefix: str) -> str:
+    return f"{prefix}-{uuid4()}"
+
+
+def build_generated_test_requirement(requirement: Requirement) -> TestRequirement:
+    statement = f"Verify: {requirement.statement}"
+    acceptance_criteria = [
+        f"Demonstrate that requirement {requirement.id} is satisfied: {requirement.statement}",
+        f"Record objective evidence for {requirement.title}.",
+    ]
+    return TestRequirement(
+        id=next_id("T"),
+        schema_version="1.0.0",
+        version="v1.0",
+        statement=statement,
+        source_requirement_ids=[requirement.id],
+        acceptance_criteria=acceptance_criteria,
+    )
+
+
 class SQLiteRepository:
     def __init__(self, db_path: str | Path = "specops.db") -> None:
         self.db_path = Path(db_path)
@@ -859,6 +879,16 @@ class SQLiteRepository:
         self._persist_trace_entry(trace)
         self.connection.commit()
         return item
+
+    def generate_test_requirement(self, requirement_id: str) -> TestRequirement:
+        requirement = self.get_requirement(requirement_id)
+        if requirement.status != "APPROVED":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only APPROVED requirements can generate test requirements")
+        for downstream_id in requirement.trace.downstream_test_requirement_ids:
+            existing = self.get_test_requirement(downstream_id)
+            if existing.status != "ARCHIVED":
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Active downstream test requirement already exists")
+        return self.create_test_requirement(build_generated_test_requirement(requirement))
 
     def create_test_requirement(self, test_requirement: TestRequirement) -> TestRequirement:
         for source_requirement_id in test_requirement.source_requirement_ids:
