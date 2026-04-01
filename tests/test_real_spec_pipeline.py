@@ -10,6 +10,7 @@ from specops_api.repository import InMemoryRepository
 
 ROOT = Path(__file__).resolve().parents[1]
 TRIUMPH_SPEC_PATH = ROOT / "Triumph" / "S6867_07" / "S6867_07.md"
+KAWASAKI_SPEC_PATH = ROOT / "Kawasaki" / "全体要件" / "全体要件.md"
 
 
 def make_memory_client() -> TestClient:
@@ -157,3 +158,38 @@ def test_real_spec_requirement_bundle_can_be_reviewed_approved_and_exported() ->
     assert trace["status"] == "APPROVED"
     assert trace["audit_rationale_id"] == audit_id
     assert trace["last_review_id"] is not None
+
+
+def test_extract_and_generate_bundle_from_kawasaki_japanese_spec() -> None:
+    client = make_memory_client()
+
+    response = client.post(
+        "/pipelines/markdown-specs/extract",
+        json={
+            "document_id": "kawasaki-global-req",
+            "markdown_path": str(KAWASAKI_SPEC_PATH),
+        },
+    )
+
+    assert response.status_code == 201
+    items = response.json()["items"]
+    assert len(items) == 5
+    assert items[0]["id"] == "S-kawasaki-global-req-sec_001"
+    assert items[0]["title"] == "テストスペック"
+    assert items[0]["source_refs"][0]["page"] == 1
+
+    section_id = "S-kawasaki-global-req-sec_001"
+    bundle_response = client.post(
+        f"/pipelines/spec-sections/{section_id}/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+
+    assert bundle_response.status_code == 201
+    payload = bundle_response.json()
+    assert payload["note"]["summary"] == "テストスペック49245-1528を満足すること"
+    assert payload["requirement"]["statement"] == "テストスペック49245-1528を満足すること"
+    assert payload["audit_rationale"]["source_refs"][0]["page"] == 1

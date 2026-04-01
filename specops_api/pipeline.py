@@ -214,9 +214,20 @@ def _derive_requirement_statement(section: SpecSection) -> str:
         if " shall " in f" {candidate.lower()} ":
             return candidate.strip()
     first_sentence = _first_sentence(section.text)
+    if _looks_like_japanese_requirement(first_sentence):
+        return first_sentence
     if first_sentence.endswith("."):
         return first_sentence[:-1] + " shall be implemented."
     return first_sentence + " shall be implemented."
+
+
+def _looks_like_japanese_requirement(text: str) -> bool:
+    normalized = text.strip()
+    if not normalized:
+        return False
+    if re.search(r"[\u3040-\u30ff\u4e00-\u9fff]", normalized) is None:
+        return False
+    return normalized.endswith("こと") or normalized.endswith("こと。")
 
 
 def _extract_title_text(item: dict) -> str:
