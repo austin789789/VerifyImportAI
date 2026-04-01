@@ -3,3 +3,15 @@ __pycache__/
 .pytest_cache/
 *.pyc
 specops.db
+
+# Real-spec derived artifacts that are reproducible from the source documents.
+Triumph/S6867_07/S6867_07_content_list.json
+Triumph/S6867_07/S6867_07_layout.pdf
+Triumph/S6867_07/S6867_07_middle.json
+Triumph/S6867_07/S6867_07_model.json
+Triumph/S6867_07/S6867_07_origin.pdf
+Kawasaki/全体要件/全体要件_content_list.json
+Kawasaki/全体要件/全体要件_layout.pdf
+Kawasaki/全体要件/全体要件_middle.json
+Kawasaki/全体要件/全体要件_model.json
+Kawasaki/全体要件/全体要件_origin.pdf
