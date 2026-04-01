@@ -58,6 +58,27 @@ def list_document_sections(document_id: str, repository: Repository) -> list[Spe
     return [section for section in sections if section.id.startswith(prefix)]
 
 
+def get_document_section(document_id: str, section_key: str, repository: Repository) -> SpecSection:
+    spec_section_id = f"S-{document_id}-{section_key}"
+    try:
+        return repository.get_spec_section(spec_section_id)
+    except HTTPException as exc:
+        if exc.status_code != status.HTTP_404_NOT_FOUND:
+            raise
+
+    extract_markdown_sections(CreateMarkdownExtractionRequest(document_id=document_id), repository)
+
+    try:
+        return repository.get_spec_section(spec_section_id)
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_404_NOT_FOUND:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"section_key {section_key} is not available for document_id {document_id}",
+            ) from exc
+        raise
+
+
 def generate_requirement_bundle(
     spec_section_id: str,
     request: GenerateRequirementBundleRequest,
@@ -117,28 +138,8 @@ def generate_requirement_bundle_for_document_section(
     request: GenerateRequirementBundleRequest,
     repository: Repository,
 ) -> RequirementBundleResponse:
-    spec_section_id = f"S-{document_id}-{section_key}"
-    try:
-        repository.get_spec_section(spec_section_id)
-    except HTTPException as exc:
-        if exc.status_code != status.HTTP_404_NOT_FOUND:
-            raise
-        extract_markdown_sections(
-            CreateMarkdownExtractionRequest(document_id=document_id),
-            repository,
-        )
-
-    try:
-        repository.get_spec_section(spec_section_id)
-    except HTTPException as exc:
-        if exc.status_code == status.HTTP_404_NOT_FOUND:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"section_key {section_key} is not available for document_id {document_id}",
-            ) from exc
-        raise
-
-    return generate_requirement_bundle(spec_section_id, request, repository)
+    section = get_document_section(document_id, section_key, repository)
+    return generate_requirement_bundle(section.id, request, repository)
 
 
 def _resolve_markdown_path(request: CreateMarkdownExtractionRequest) -> Path:

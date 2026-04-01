@@ -31,6 +31,7 @@ from .models import (
 )
 from .pipeline import (
     extract_markdown_sections,
+    get_document_section,
     generate_requirement_bundle,
     generate_requirement_bundle_for_document_section,
     list_document_sections,
@@ -104,6 +105,14 @@ def create_app(repository: Repository | None = None) -> FastAPI:
     ) -> ExtractedSpecSectionsResponse:
         return ExtractedSpecSectionsResponse(items=list_document_sections(document_id, repository))
 
+    @app.get("/pipelines/markdown-specs/{document_id}/sections/{section_key}", response_model=SpecSection)
+    def get_real_markdown_spec_section(
+        document_id: str,
+        section_key: str,
+        repository: Repository = Depends(get_repository),
+    ) -> SpecSection:
+        return get_document_section(document_id, section_key, repository)
+
     @app.post("/pipelines/spec-sections/{spec_section_id}/generate-requirement-bundle", response_model=RequirementBundleResponse, status_code=status.HTTP_201_CREATED)
     def generate_real_spec_requirement_bundle(
         spec_section_id: str,
@@ -124,6 +133,7 @@ def create_app(repository: Repository | None = None) -> FastAPI:
         repository: Repository = Depends(get_repository),
     ) -> RequirementBundleResponse:
         return generate_requirement_bundle_for_document_section(document_id, section_key, request, repository)
+
     @app.post("/notes", response_model=Note, status_code=status.HTTP_201_CREATED)
     def create_note(
         request: CreateNoteRequest,
