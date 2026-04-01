@@ -199,6 +199,68 @@ def test_extract_and_generate_bundle_from_kawasaki_japanese_spec() -> None:
     assert payload["audit_rationale"]["source_refs"][0]["page"] == 1
 
 
+def test_kawasaki_real_spec_bundle_can_flow_through_review_export_and_test_generation() -> None:
+    client = make_memory_client()
+
+    extract_response = client.post(
+        "/pipelines/markdown-specs/extract",
+        json={
+            "document_id": "kawasaki-global-req",
+            "markdown_path": str(KAWASAKI_SPEC_PATH),
+        },
+    )
+    assert extract_response.status_code == 201
+
+    section_id = "S-kawasaki-global-req-sec_001"
+    bundle_response = client.post(
+        f"/pipelines/spec-sections/{section_id}/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+    assert bundle_response.status_code == 201
+    payload = bundle_response.json()
+    requirement_id = payload["requirement"]["id"]
+    audit_id = payload["audit_rationale"]["id"]
+
+    submit_response = client.post(
+        f"/requirements/{requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a", "review_note": "ready from kawasaki spec"},
+    )
+    assert submit_response.status_code == 200
+    assert submit_response.json()["status"] == "IN_REVIEW"
+
+    approve_response = client.post(
+        "/reviews",
+        json={
+            "artifact_id": requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Approved from Kawasaki markdown pipeline.",
+        },
+    )
+    assert approve_response.status_code == 201
+    assert approve_response.json()["artifact"]["status"] == "APPROVED"
+    assert approve_response.json()["artifact"]["audit_rationale_id"] == audit_id
+
+    export_response = client.post(
+        "/exports/codebeamer",
+        json={"requirement_id": requirement_id, "requested_by": "user-a"},
+    )
+    assert export_response.status_code == 200
+    assert export_response.json()["status"] == "QUEUED"
+
+    generate_response = client.post(f"/requirements/{requirement_id}/generate-test-requirement")
+    assert generate_response.status_code == 201
+    generated = generate_response.json()
+    assert generated["artifact_type"] == "test_requirement"
+    assert generated["source_requirement_ids"] == [requirement_id]
+    assert generated["statement"].startswith("Verify:")
+    assert "テストスペック49245-1528を満足すること" in generated["statement"]
+
+
 def test_approved_real_spec_requirement_can_generate_downstream_test_requirement() -> None:
     client = make_memory_client()
     extract_response = client.post(
