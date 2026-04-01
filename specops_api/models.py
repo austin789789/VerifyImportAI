@@ -277,3 +277,25 @@ class ExportJobResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
     detail: str | None = None
+
+
+class CreateMarkdownExtractionRequest(BaseModel):
+    document_id: str
+    markdown_path: str
+
+
+class ExtractedSpecSectionsResponse(BaseModel):
+    items: list[SpecSection]
+
+
+class GenerateRequirementBundleRequest(BaseModel):
+    prompt_version: str
+    model_version: str
+    variant_scope: Literal["base", "overlay"] = "base"
+    compliance: Compliance = Field(default_factory=Compliance)
+
+
+class RequirementBundleResponse(BaseModel):
+    note: Note
+    requirement: Requirement
+    audit_rationale: AuditRationale

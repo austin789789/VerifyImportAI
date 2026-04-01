@@ -7,10 +7,13 @@ from .models import (
     AuditRationale,
     CodebeamerExportRequest,
     CreateAuditRationaleRequest,
+    CreateMarkdownExtractionRequest,
     CreateNoteRequest,
     CreateRequirementRequest,
     CreateReviewRequest,
     CreateTestRequirementRequest,
+    ExtractedSpecSectionsResponse,
+    GenerateRequirementBundleRequest,
     ErrorResponse,
     LockConflictResponse,
     LockRequest,
@@ -18,12 +21,14 @@ from .models import (
     PatchRequirementRequest,
     PatchTestRequirementRequest,
     Requirement,
+    RequirementBundleResponse,
     RequirementTrace,
     ReviewRecord,
     SpecSection,
     SubmitReviewRequest,
     TestRequirement,
 )
+from .pipeline import extract_markdown_sections, generate_requirement_bundle
 from .repository import InMemoryRepository, Repository, next_id, repository as default_repository
 
 
@@ -74,6 +79,20 @@ def create_app(repository: Repository | None = None) -> FastAPI:
     def get_spec_section(spec_section_id: str, repository: Repository = Depends(get_repository)) -> SpecSection:
         return repository.get_spec_section(spec_section_id)
 
+    @app.post("/pipelines/markdown-specs/extract", response_model=ExtractedSpecSectionsResponse, status_code=status.HTTP_201_CREATED)
+    def extract_real_markdown_spec(
+        request: CreateMarkdownExtractionRequest,
+        repository: Repository = Depends(get_repository),
+    ) -> ExtractedSpecSectionsResponse:
+        return ExtractedSpecSectionsResponse(items=extract_markdown_sections(request, repository))
+
+    @app.post("/pipelines/spec-sections/{spec_section_id}/generate-requirement-bundle", response_model=RequirementBundleResponse, status_code=status.HTTP_201_CREATED)
+    def generate_real_spec_requirement_bundle(
+        spec_section_id: str,
+        request: GenerateRequirementBundleRequest,
+        repository: Repository = Depends(get_repository),
+    ) -> RequirementBundleResponse:
+        return generate_requirement_bundle(spec_section_id, request, repository)
     @app.post("/notes", response_model=Note, status_code=status.HTTP_201_CREATED)
     def create_note(
         request: CreateNoteRequest,
