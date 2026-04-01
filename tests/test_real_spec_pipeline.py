@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from specops_api.app import create_app
-from specops_api.repository import InMemoryRepository
+from specops_api.repository import InMemoryRepository, SQLiteRepository
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +15,10 @@ KAWASAKI_SPEC_PATH = ROOT / "Kawasaki" / "全体要件" / "全体要件.md"
 
 def make_memory_client() -> TestClient:
     return TestClient(create_app(InMemoryRepository()))
+
+
+def make_sqlite_client(db_path: Path) -> TestClient:
+    return TestClient(create_app(SQLiteRepository(db_path)))
 
 
 def test_extract_markdown_sections_from_real_spec_fixture() -> None:
@@ -253,3 +257,54 @@ def test_approved_real_spec_requirement_can_generate_downstream_test_requirement
     test_requirement_trace = client.get(f"/trace/{generated['id']}")
     assert test_requirement_trace.status_code == 200
     assert requirement_id in test_requirement_trace.json()["upstream_ids"]
+
+
+def test_real_spec_pipeline_persists_across_sqlite_app_instances(tmp_path: Path) -> None:
+    db_path = tmp_path / "real-spec-pipeline.db"
+    client_a = make_sqlite_client(db_path)
+
+    extract_response = client_a.post(
+        "/pipelines/markdown-specs/extract",
+        json={
+            "document_id": "triumph-s6867-07",
+            "markdown_path": str(TRIUMPH_SPEC_PATH),
+        },
+    )
+    assert extract_response.status_code == 201
+
+    section_id = "S-triumph-s6867-07-sec_007"
+    bundle_response = client_a.post(
+        f"/pipelines/spec-sections/{section_id}/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+    assert bundle_response.status_code == 201
+    payload = bundle_response.json()
+
+    note_id = payload["note"]["id"]
+    requirement_id = payload["requirement"]["id"]
+    audit_id = payload["audit_rationale"]["id"]
+
+    client_b = make_sqlite_client(db_path)
+
+    note_response = client_b.get(f"/notes/{note_id}")
+    assert note_response.status_code == 200
+    assert note_response.json()["source_spec_ids"] == [section_id]
+
+    requirement_response = client_b.get(f"/requirements/{requirement_id}")
+    assert requirement_response.status_code == 200
+    assert requirement_response.json()["audit_rationale_id"] == audit_id
+
+    audit_response = client_b.get(f"/audit-rationales/{audit_id}")
+    assert audit_response.status_code == 200
+    assert [ref["page"] for ref in audit_response.json()["source_refs"]] == [2, 3, 4]
+
+    trace_response = client_b.get(f"/trace/{requirement_id}")
+    assert trace_response.status_code == 200
+    trace = trace_response.json()
+    assert section_id in trace["upstream_ids"]
+    assert note_id in trace["upstream_ids"]
+    assert trace["audit_rationale_id"] == audit_id
