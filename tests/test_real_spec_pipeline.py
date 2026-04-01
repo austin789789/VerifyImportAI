@@ -522,6 +522,73 @@ def test_generated_real_spec_test_requirement_can_be_approved_in_sqlite_without_
     assert approve_test_requirement.json()["artifact"]["audit_rationale_id"] == generated["audit_rationale_id"]
 
 
+def test_generated_real_spec_test_requirement_can_be_approved_in_memory_without_manual_audit_patch() -> None:
+    client = make_memory_client()
+
+    extract_response = client.post(
+        "/pipelines/markdown-specs/extract",
+        json={
+            "document_id": "triumph-s6867-07",
+            "markdown_path": str(TRIUMPH_SPEC_PATH),
+        },
+    )
+    assert extract_response.status_code == 201
+
+    section_id = "S-triumph-s6867-07-sec_007"
+    bundle_response = client.post(
+        f"/pipelines/spec-sections/{section_id}/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+    assert bundle_response.status_code == 201
+    requirement_id = bundle_response.json()["requirement"]["id"]
+
+    submit_requirement = client.post(
+        f"/requirements/{requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a"},
+    )
+    assert submit_requirement.status_code == 200
+
+    approve_requirement = client.post(
+        "/reviews",
+        json={
+            "artifact_id": requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Approved for downstream generation.",
+        },
+    )
+    assert approve_requirement.status_code == 201
+
+    generate_test_requirement = client.post(f"/requirements/{requirement_id}/generate-test-requirement")
+    assert generate_test_requirement.status_code == 201
+    generated = generate_test_requirement.json()
+    test_requirement_id = generated["id"]
+    assert generated["audit_rationale_id"] is not None
+
+    submit_test_requirement = client.post(
+        f"/test-requirements/{test_requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a"},
+    )
+    assert submit_test_requirement.status_code == 200
+
+    approve_test_requirement = client.post(
+        "/reviews",
+        json={
+            "artifact_id": test_requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Approved generated test requirement.",
+        },
+    )
+    assert approve_test_requirement.status_code == 201
+    assert approve_test_requirement.json()["artifact"]["status"] == "APPROVED"
+    assert approve_test_requirement.json()["artifact"]["audit_rationale_id"] == generated["audit_rationale_id"]
+
+
 def test_markdown_extraction_rejects_paths_outside_repo() -> None:
     client = make_memory_client()
     outside_path = Path.cwd().anchor + "outside-spec.md"

@@ -12,9 +12,9 @@ from .models import (
     CreateRequirementRequest,
     CreateReviewRequest,
     CreateTestRequirementRequest,
+    ErrorResponse,
     ExtractedSpecSectionsResponse,
     GenerateRequirementBundleRequest,
-    ErrorResponse,
     LockConflictResponse,
     LockRequest,
     Note,
@@ -182,6 +182,13 @@ def create_app(repository: Repository | None = None) -> FastAPI:
         _ = request
         return repository.submit_requirement_review(requirement_id)
 
+    @app.post("/requirements/{requirement_id}/generate-test-requirement", response_model=TestRequirement, status_code=status.HTTP_201_CREATED)
+    def generate_test_requirement(
+        requirement_id: str,
+        repository: Repository = Depends(get_repository),
+    ) -> TestRequirement:
+        return repository.generate_test_requirement(requirement_id)
+
     @app.post("/test-requirements", response_model=TestRequirement, status_code=status.HTTP_201_CREATED)
     def create_test_requirement(
         request: CreateTestRequirementRequest,
@@ -310,3 +317,6 @@ def create_app(repository: Repository | None = None) -> FastAPI:
 app = create_app(default_repository)
 
 __all__ = ["app", "create_app", "InMemoryRepository"]
+
+
+

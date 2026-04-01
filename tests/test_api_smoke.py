@@ -420,6 +420,93 @@ def test_approve_and_export_flow() -> None:
     assert export_response.json()["status"] == "QUEUED"
 
 
+
+def test_generate_test_requirement_from_approved_requirement_flow() -> None:
+    client = make_memory_client()
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+    attach_audit_rationale(client, requirement_id, spec_section_id)
+
+    submit_response = client.post(
+        f"/requirements/{requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a"},
+    )
+    assert submit_response.status_code == 200
+
+    approve_response = client.post(
+        "/reviews",
+        json={
+            "artifact_id": requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Approved for downstream test generation.",
+        },
+    )
+    assert approve_response.status_code == 201
+
+    generate_response = client.post(f"/requirements/{requirement_id}/generate-test-requirement")
+    assert generate_response.status_code == 201
+    generated = generate_response.json()
+
+    assert generated["artifact_type"] == "test_requirement"
+    assert generated["status"] == "DRAFT"
+    assert generated["source_requirement_ids"] == [requirement_id]
+    assert generated["statement"].startswith("Verify:")
+    assert len(generated["acceptance_criteria"]) == 2
+
+    trace_response = client.get(f"/trace/{requirement_id}")
+    assert trace_response.status_code == 200
+    assert generated["id"] in trace_response.json()["downstream_ids"]
+
+
+def test_generate_test_requirement_requires_approved_requirement() -> None:
+    client = make_memory_client()
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+
+    generate_response = client.post(f"/requirements/{requirement_id}/generate-test-requirement")
+    assert generate_response.status_code == 409
+    assert generate_response.json() == {
+        "error": "Only APPROVED requirements can generate test requirements",
+        "detail": None,
+    }
+
+
+def test_generate_test_requirement_prevents_duplicate_active_downstream() -> None:
+    client = make_memory_client()
+    spec_section_id = create_spec_section(client)
+    note_id = create_note(client, spec_section_id)
+    requirement_id = create_requirement(client, spec_section_id, note_id)
+    attach_audit_rationale(client, requirement_id, spec_section_id)
+
+    submit_response = client.post(
+        f"/requirements/{requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a"},
+    )
+    assert submit_response.status_code == 200
+
+    approve_response = client.post(
+        "/reviews",
+        json={
+            "artifact_id": requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Approved for downstream test generation.",
+        },
+    )
+    assert approve_response.status_code == 201
+
+    first_generate_response = client.post(f"/requirements/{requirement_id}/generate-test-requirement")
+    assert first_generate_response.status_code == 201
+
+    second_generate_response = client.post(f"/requirements/{requirement_id}/generate-test-requirement")
+    assert second_generate_response.status_code == 409
+    assert second_generate_response.json() == {
+        "error": "Active downstream test requirement already exists",
+        "detail": None,
+    }
 def test_invalid_approve_without_audit_returns_error_response() -> None:
     client = make_memory_client()
     spec_section_id = create_spec_section(client)
@@ -753,3 +840,4 @@ def test_sqlite_repository_cascades_link_cleanup_on_parent_delete(tmp_path: Path
         assert orphan_test_requirement == (test_requirement_id,)
     finally:
         connection.close()
+

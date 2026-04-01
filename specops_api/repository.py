@@ -10,6 +10,7 @@ from fastapi import HTTPException, status
 
 from .models import (
     AuditRationale,
+    AuditSourceRef,
     CodebeamerExportRequest,
     ExportJobResponse,
     LockRequest,
@@ -45,6 +46,7 @@ class Repository(Protocol):
     def patch_requirement(self, requirement_id: str, title: str | None, statement: str | None, compliance, audit_rationale_id: str | None = None) -> Requirement: ...
     def submit_requirement_review(self, requirement_id: str) -> Requirement: ...
     def create_test_requirement(self, test_requirement: TestRequirement) -> TestRequirement: ...
+    def generate_test_requirement(self, requirement_id: str) -> TestRequirement: ...
     def list_test_requirements(self, status_filter: str | None, source_requirement_id: str | None) -> list[TestRequirement]: ...
     def get_test_requirement(self, test_requirement_id: str) -> TestRequirement: ...
     def patch_test_requirement(self, test_requirement_id: str, statement: str | None, acceptance_criteria: list[str] | None, audit_rationale_id: str | None = None) -> TestRequirement: ...
@@ -58,6 +60,43 @@ class Repository(Protocol):
     def get_trace(self, artifact_id: str) -> TraceMapEntry: ...
     def export_requirement(self, request: CodebeamerExportRequest) -> ExportJobResponse: ...
 
+
+
+def build_generated_test_requirement(requirement: Requirement) -> TestRequirement:
+    statement = f"Verify: {requirement.statement}"
+    acceptance_criteria = [
+        f"Demonstrate that requirement {requirement.id} is satisfied: {requirement.statement}",
+        f"Record objective evidence for {requirement.title}.",
+    ]
+    return TestRequirement(
+        id=next_id("T"),
+        schema_version="1.0.0",
+        version="v1.0",
+        statement=statement,
+        source_requirement_ids=[requirement.id],
+        acceptance_criteria=acceptance_criteria,
+    )
+
+
+def build_generated_test_requirement_audit(
+    test_requirement: TestRequirement,
+    source_audit: AuditRationale,
+) -> AuditRationale:
+    return AuditRationale(
+        id=next_id("AR"),
+        artifact_id=test_requirement.id,
+        source_refs=[
+            AuditSourceRef(
+                spec_id=source_ref.spec_id,
+                page=source_ref.page,
+                bbox=source_ref.bbox,
+            )
+            for source_ref in source_audit.source_refs
+        ],
+        prompt_version=source_audit.prompt_version,
+        model_version=source_audit.model_version,
+        silver_refs=source_audit.silver_refs,
+    )
 
 class InMemoryRepository:
     def __init__(self) -> None:
@@ -195,6 +234,21 @@ class InMemoryRepository:
         item.updated_at = utc_now()
         self.trace_entries[requirement_id].status = item.status
         return item
+
+    def generate_test_requirement(self, requirement_id: str) -> TestRequirement:
+        requirement = self.get_requirement(requirement_id)
+        if requirement.status != "APPROVED":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only APPROVED requirements can generate test requirements")
+        for downstream_id in requirement.trace.downstream_test_requirement_ids:
+            existing = self.test_requirements.get(downstream_id)
+            if existing and existing.status != "ARCHIVED":
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Active downstream test requirement already exists")
+        test_requirement = self.create_test_requirement(build_generated_test_requirement(requirement))
+        if requirement.audit_rationale_id:
+            source_audit = self.get_audit_rationale(requirement.audit_rationale_id)
+            generated_audit = self.create_audit_rationale(build_generated_test_requirement_audit(test_requirement, source_audit))
+            test_requirement = self.patch_test_requirement(test_requirement.id, None, None, generated_audit.id)
+        return test_requirement
 
     def create_test_requirement(self, test_requirement: TestRequirement) -> TestRequirement:
         for source_requirement_id in test_requirement.source_requirement_ids:
@@ -520,6 +574,21 @@ class SQLiteRepository:
         self._save_model("trace_entries", "artifact_id", requirement_id, trace)
         return item
 
+    def generate_test_requirement(self, requirement_id: str) -> TestRequirement:
+        requirement = self.get_requirement(requirement_id)
+        if requirement.status != "APPROVED":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only APPROVED requirements can generate test requirements")
+        for downstream_id in requirement.trace.downstream_test_requirement_ids:
+            existing = self.get_test_requirement(downstream_id)
+            if existing.status != "ARCHIVED":
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Active downstream test requirement already exists")
+        test_requirement = self.create_test_requirement(build_generated_test_requirement(requirement))
+        if requirement.audit_rationale_id:
+            source_audit = self.get_audit_rationale(requirement.audit_rationale_id)
+            generated_audit = self.create_audit_rationale(build_generated_test_requirement_audit(test_requirement, source_audit))
+            test_requirement = self.patch_test_requirement(test_requirement.id, None, None, generated_audit.id)
+        return test_requirement
+
     def create_test_requirement(self, test_requirement: TestRequirement) -> TestRequirement:
         for source_requirement_id in test_requirement.source_requirement_ids:
             requirement = self.get_requirement(source_requirement_id)
@@ -687,3 +756,5 @@ from .sqlite_repository_relational import SQLiteRepository as SQLiteRepository
 
 
 repository = SQLiteRepository()
+
+
