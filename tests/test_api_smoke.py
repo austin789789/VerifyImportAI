@@ -72,6 +72,17 @@ def test_registered_real_spec_section_detail_smoke() -> None:
     assert payload["title"] == "Operation"
 
 
+def test_registered_kawasaki_section_detail_smoke() -> None:
+    client = make_memory_client()
+
+    response = client.get("/pipelines/markdown-specs/kawasaki-global-req/sections/sec_001")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["id"] == "S-kawasaki-global-req-sec_001"
+    assert payload["title"] == "テストスペック"
+
+
 def test_registered_real_spec_direct_bundle_generation_smoke() -> None:
     client = make_memory_client()
 

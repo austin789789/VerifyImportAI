@@ -134,6 +134,20 @@ def test_get_registered_real_spec_section_detail_from_document_id() -> None:
     assert "Range to Empty calculation shall be carried out" in payload["text"]
 
 
+def test_get_registered_real_spec_section_detail_from_kawasaki_document_id() -> None:
+    client = make_memory_client()
+
+    response = client.get("/pipelines/markdown-specs/kawasaki-global-req/sections/sec_001")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["id"] == "S-kawasaki-global-req-sec_001"
+    assert payload["section_key"] == "sec_001"
+    assert payload["title"] == "テストスペック"
+    assert "49245-1528を満足すること" in payload["text"]
+    assert payload["parser_warnings"] == []
+
+
 def test_get_registered_real_spec_section_detail_rejects_unknown_section_key() -> None:
     client = make_memory_client()
 
@@ -142,6 +156,18 @@ def test_get_registered_real_spec_section_detail_rejects_unknown_section_key() -
     assert response.status_code == 404
     assert response.json() == {
         "error": "section_key sec_999 is not available for document_id triumph-s6867-07",
+        "detail": None,
+    }
+
+
+def test_get_registered_real_spec_section_detail_rejects_unknown_document_id() -> None:
+    client = make_memory_client()
+
+    response = client.get("/pipelines/markdown-specs/unknown-real-spec/sections/sec_001")
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": "document_id unknown-real-spec is not registered in fixtures/real_spec_assets.json",
         "detail": None,
     }
 
@@ -208,6 +234,28 @@ def test_registered_real_spec_can_flow_from_document_section_detail_to_direct_bu
 
     bundle_response = client.post(
         f"/pipelines/markdown-specs/triumph-s6867-07/sections/{operation['section_key']}/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+
+    assert bundle_response.status_code == 201
+    payload = bundle_response.json()
+    assert payload["requirement"]["source_spec_ids"] == [operation["id"]]
+    assert payload["audit_rationale"]["source_refs"][0]["spec_id"] == operation["id"]
+
+
+def test_kawasaki_real_spec_can_flow_from_document_section_detail_to_direct_bundle_generation() -> None:
+    client = make_memory_client()
+
+    section_response = client.get("/pipelines/markdown-specs/kawasaki-global-req/sections/sec_001")
+    assert section_response.status_code == 200
+    operation = section_response.json()
+
+    bundle_response = client.post(
+        f"/pipelines/markdown-specs/kawasaki-global-req/sections/{operation['section_key']}/generate-requirement-bundle",
         json={
             "prompt_version": "deterministic-note-v1",
             "model_version": "rule-based-generator-v1",
