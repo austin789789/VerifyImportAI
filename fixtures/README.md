@@ -20,3 +20,9 @@ These fixtures are intentionally small but cover:
 - table-adjacent extraction with `parser_warnings`
 - note / requirement contract regression cases built on top of stable `spec_section` samples
 - review / audit approval gates for both successful and failing flows
+
+Real-spec governance baseline:
+
+- `real_spec_assets.json` is the machine-readable manifest for tracked real-spec fixtures
+- each document entry defines the required Markdown source, `*_content_list_v2.json`, image directory, and ignored derivative files
+- `tests/test_real_spec_pipeline.py` validates this manifest against the tracked workspace baseline

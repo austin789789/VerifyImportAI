@@ -1,0 +1,30 @@
+{
+  "documents": [
+    {
+      "document_id": "triumph-s6867-07",
+      "markdown_path": "Triumph/S6867_07/S6867_07.md",
+      "content_list_v2_path": "Triumph/S6867_07/S6867_07_content_list_v2.json",
+      "image_dir": "Triumph/S6867_07/images",
+      "ignored_derivatives": [
+        "Triumph/S6867_07/S6867_07_content_list.json",
+        "Triumph/S6867_07/S6867_07_layout.pdf",
+        "Triumph/S6867_07/S6867_07_middle.json",
+        "Triumph/S6867_07/S6867_07_model.json",
+        "Triumph/S6867_07/S6867_07_origin.pdf"
+      ]
+    },
+    {
+      "document_id": "kawasaki-global-req",
+      "markdown_path": "Kawasaki/\u5168\u4f53\u8981\u4ef6/\u5168\u4f53\u8981\u4ef6.md",
+      "content_list_v2_path": "Kawasaki/\u5168\u4f53\u8981\u4ef6/\u5168\u4f53\u8981\u4ef6_content_list_v2.json",
+      "image_dir": "Kawasaki/\u5168\u4f53\u8981\u4ef6/images",
+      "ignored_derivatives": [
+        "Kawasaki/\u5168\u4f53\u8981\u4ef6/\u5168\u4f53\u8981\u4ef6_content_list.json",
+        "Kawasaki/\u5168\u4f53\u8981\u4ef6/\u5168\u4f53\u8981\u4ef6_layout.pdf",
+        "Kawasaki/\u5168\u4f53\u8981\u4ef6/\u5168\u4f53\u8981\u4ef6_middle.json",
+        "Kawasaki/\u5168\u4f53\u8981\u4ef6/\u5168\u4f53\u8981\u4ef6_model.json",
+        "Kawasaki/\u5168\u4f53\u8981\u4ef6/\u5168\u4f53\u8981\u4ef6_origin.pdf"
+      ]
+    }
+  ]
+}

@@ -14,6 +14,7 @@ from specops_api import pipeline as pipeline_module
 ROOT = Path(__file__).resolve().parents[1]
 TRIUMPH_SPEC_PATH = ROOT / "Triumph" / "S6867_07" / "S6867_07.md"
 KAWASAKI_SPEC_PATH = ROOT / "Kawasaki" / "全体要件" / "全体要件.md"
+REAL_SPEC_ASSET_MANIFEST_PATH = ROOT / "fixtures" / "real_spec_assets.json"
 
 
 def make_memory_client() -> TestClient:
@@ -33,6 +34,10 @@ def _content_list_image_paths(content_list_path: Path) -> set[Path]:
             if raw_path:
                 image_paths.add(content_list_path.parent / raw_path)
     return image_paths
+
+
+def _real_spec_asset_manifest() -> dict:
+    return json.loads(REAL_SPEC_ASSET_MANIFEST_PATH.read_text(encoding="utf-8"))
 
 
 def test_extract_markdown_sections_from_real_spec_fixture() -> None:
@@ -69,6 +74,40 @@ def test_tracked_real_spec_image_references_exist() -> None:
     assert tracked_refs
     missing_refs = sorted(str(path) for path in tracked_refs if not path.exists())
     assert missing_refs == []
+
+
+def test_real_spec_asset_manifest_matches_tracked_baseline() -> None:
+    manifest = _real_spec_asset_manifest()
+    documents = manifest["documents"]
+
+    assert [document["document_id"] for document in documents] == [
+        "triumph-s6867-07",
+        "kawasaki-global-req",
+    ]
+
+    markdown_paths = [ROOT / document["markdown_path"] for document in documents]
+    content_list_paths = [ROOT / document["content_list_v2_path"] for document in documents]
+    image_dirs = [ROOT / document["image_dir"] for document in documents]
+
+    assert markdown_paths == [TRIUMPH_SPEC_PATH, KAWASAKI_SPEC_PATH]
+    assert [path.exists() for path in markdown_paths] == [True, True]
+    assert [path.exists() for path in content_list_paths] == [True, True]
+    assert [path.is_dir() for path in image_dirs] == [True, True]
+
+
+def test_real_spec_ignored_derivatives_are_covered_by_gitignore() -> None:
+    manifest = _real_spec_asset_manifest()
+    gitignore_lines = set((ROOT / ".gitignore").read_text(encoding="utf-8").splitlines())
+
+    ignored_derivatives = [
+        ignored_path
+        for document in manifest["documents"]
+        for ignored_path in document["ignored_derivatives"]
+    ]
+
+    assert ignored_derivatives
+    assert all((ROOT / ignored_path).exists() for ignored_path in ignored_derivatives)
+    assert all(ignored_path in gitignore_lines for ignored_path in ignored_derivatives)
 
 
 def test_triumph_real_spec_extraction_retains_equations_as_math_warnings() -> None:
