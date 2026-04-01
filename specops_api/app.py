@@ -33,6 +33,7 @@ from .pipeline import (
     extract_markdown_sections,
     generate_requirement_bundle,
     generate_requirement_bundle_for_document_section,
+    list_document_sections,
     list_registered_real_specs,
 )
 from .repository import InMemoryRepository, Repository, next_id, repository as default_repository
@@ -95,6 +96,13 @@ def create_app(repository: Repository | None = None) -> FastAPI:
     @app.get("/pipelines/markdown-specs/registered", response_model=RegisteredRealSpecsResponse)
     def list_real_markdown_specs() -> RegisteredRealSpecsResponse:
         return RegisteredRealSpecsResponse(items=list_registered_real_specs())
+
+    @app.get("/pipelines/markdown-specs/{document_id}/sections", response_model=ExtractedSpecSectionsResponse)
+    def list_real_markdown_spec_sections(
+        document_id: str,
+        repository: Repository = Depends(get_repository),
+    ) -> ExtractedSpecSectionsResponse:
+        return ExtractedSpecSectionsResponse(items=list_document_sections(document_id, repository))
 
     @app.post("/pipelines/spec-sections/{spec_section_id}/generate-requirement-bundle", response_model=RequirementBundleResponse, status_code=status.HTTP_201_CREATED)
     def generate_real_spec_requirement_bundle(

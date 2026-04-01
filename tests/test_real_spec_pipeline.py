@@ -107,6 +107,19 @@ def test_list_registered_real_specs_from_manifest() -> None:
     }
 
 
+def test_list_registered_real_spec_sections_from_document_id() -> None:
+    client = make_memory_client()
+
+    response = client.get("/pipelines/markdown-specs/triumph-s6867-07/sections")
+
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert len(items) == 8
+    assert items[0]["id"] == "S-triumph-s6867-07-sec_001"
+    assert items[6]["section_key"] == "sec_007"
+    assert items[6]["title"] == "Operation"
+
+
 def test_registered_real_spec_can_flow_from_listing_to_bundle_generation() -> None:
     client = make_memory_client()
 
@@ -136,6 +149,28 @@ def test_registered_real_spec_can_flow_from_listing_to_bundle_generation() -> No
     payload = bundle_response.json()
     assert payload["requirement"]["source_spec_ids"] == [section_id]
     assert payload["audit_rationale"]["source_refs"][0]["spec_id"] == section_id
+
+
+def test_registered_real_spec_can_flow_from_document_section_listing_to_direct_bundle_generation() -> None:
+    client = make_memory_client()
+
+    sections_response = client.get("/pipelines/markdown-specs/triumph-s6867-07/sections")
+    assert sections_response.status_code == 200
+    operation = next(item for item in sections_response.json()["items"] if item["section_key"] == "sec_007")
+
+    bundle_response = client.post(
+        f"/pipelines/markdown-specs/triumph-s6867-07/sections/{operation['section_key']}/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+
+    assert bundle_response.status_code == 201
+    payload = bundle_response.json()
+    assert payload["requirement"]["source_spec_ids"] == [operation["id"]]
+    assert payload["audit_rationale"]["source_refs"][0]["spec_id"] == operation["id"]
 
 
 def test_direct_bundle_generation_from_document_id_and_section_key() -> None:

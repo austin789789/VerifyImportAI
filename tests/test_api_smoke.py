@@ -50,6 +50,17 @@ def test_registered_real_spec_listing_smoke() -> None:
     ]
 
 
+def test_registered_real_spec_section_listing_smoke() -> None:
+    client = make_memory_client()
+
+    response = client.get("/pipelines/markdown-specs/triumph-s6867-07/sections")
+
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert items[0]["id"] == "S-triumph-s6867-07-sec_001"
+    assert any(item["section_key"] == "sec_007" for item in items)
+
+
 def test_registered_real_spec_direct_bundle_generation_smoke() -> None:
     client = make_memory_client()
 

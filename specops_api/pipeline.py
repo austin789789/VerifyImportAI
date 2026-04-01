@@ -51,6 +51,13 @@ def list_registered_real_specs() -> list[RegisteredRealSpec]:
     ]
 
 
+def list_document_sections(document_id: str, repository: Repository) -> list[SpecSection]:
+    extract_markdown_sections(CreateMarkdownExtractionRequest(document_id=document_id), repository)
+    prefix = f"S-{document_id}-"
+    sections = repository.list_spec_sections(None, None)
+    return [section for section in sections if section.id.startswith(prefix)]
+
+
 def generate_requirement_bundle(
     spec_section_id: str,
     request: GenerateRequirementBundleRequest,
