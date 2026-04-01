@@ -83,6 +83,30 @@ def test_extract_markdown_sections_from_manifest_registered_document_id() -> Non
     assert items[6]["title"] == "Operation"
 
 
+def test_list_registered_real_specs_from_manifest() -> None:
+    client = make_memory_client()
+
+    response = client.get("/pipelines/markdown-specs/registered")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "items": [
+            {
+                "document_id": "triumph-s6867-07",
+                "markdown_path": "Triumph/S6867_07/S6867_07.md",
+                "content_list_v2_path": "Triumph/S6867_07/S6867_07_content_list_v2.json",
+                "image_dir": "Triumph/S6867_07/images",
+            },
+            {
+                "document_id": "kawasaki-global-req",
+                "markdown_path": "Kawasaki/全体要件/全体要件.md",
+                "content_list_v2_path": "Kawasaki/全体要件/全体要件_content_list_v2.json",
+                "image_dir": "Kawasaki/全体要件/images",
+            },
+        ]
+    }
+
+
 def test_extract_markdown_sections_rejects_unknown_manifest_document_id() -> None:
     client = make_memory_client()
 

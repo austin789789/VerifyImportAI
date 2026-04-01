@@ -294,6 +294,17 @@ class ExtractedSpecSectionsResponse(BaseModel):
     items: list[SpecSection]
 
 
+class RegisteredRealSpec(BaseModel):
+    document_id: str
+    markdown_path: str
+    content_list_v2_path: str
+    image_dir: str
+
+
+class RegisteredRealSpecsResponse(BaseModel):
+    items: list[RegisteredRealSpec]
+
+
 class GenerateRequirementBundleRequest(BaseModel):
     prompt_version: str
     model_version: str

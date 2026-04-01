@@ -37,6 +37,19 @@ def create_spec_section(client: TestClient) -> str:
     return spec_response.json()["id"]
 
 
+def test_registered_real_spec_listing_smoke() -> None:
+    client = make_memory_client()
+
+    response = client.get("/pipelines/markdown-specs/registered")
+
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert [item["document_id"] for item in items] == [
+        "triumph-s6867-07",
+        "kawasaki-global-req",
+    ]
+
+
 def create_note(client: TestClient, source_spec_id: str) -> str:
     note_response = client.post(
         "/notes",

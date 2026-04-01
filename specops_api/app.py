@@ -23,12 +23,13 @@ from .models import (
     Requirement,
     RequirementBundleResponse,
     RequirementTrace,
+    RegisteredRealSpecsResponse,
     ReviewRecord,
     SpecSection,
     SubmitReviewRequest,
     TestRequirement,
 )
-from .pipeline import extract_markdown_sections, generate_requirement_bundle
+from .pipeline import extract_markdown_sections, generate_requirement_bundle, list_registered_real_specs
 from .repository import InMemoryRepository, Repository, next_id, repository as default_repository
 
 
@@ -85,6 +86,10 @@ def create_app(repository: Repository | None = None) -> FastAPI:
         repository: Repository = Depends(get_repository),
     ) -> ExtractedSpecSectionsResponse:
         return ExtractedSpecSectionsResponse(items=extract_markdown_sections(request, repository))
+
+    @app.get("/pipelines/markdown-specs/registered", response_model=RegisteredRealSpecsResponse)
+    def list_real_markdown_specs() -> RegisteredRealSpecsResponse:
+        return RegisteredRealSpecsResponse(items=list_registered_real_specs())
 
     @app.post("/pipelines/spec-sections/{spec_section_id}/generate-requirement-bundle", response_model=RequirementBundleResponse, status_code=status.HTTP_201_CREATED)
     def generate_real_spec_requirement_bundle(

@@ -12,6 +12,7 @@ from .models import (
     CreateMarkdownExtractionRequest,
     GenerateRequirementBundleRequest,
     Note,
+    RegisteredRealSpec,
     Requirement,
     RequirementBundleResponse,
     RequirementTrace,
@@ -35,6 +36,19 @@ def extract_markdown_sections(request: CreateMarkdownExtractionRequest, reposito
     else:
         sections = _extract_sections_from_markdown(request.document_id, markdown_path)
     return [repository.upsert_spec_section(section) for section in sections]
+
+
+def list_registered_real_specs() -> list[RegisteredRealSpec]:
+    manifest = _load_real_spec_asset_manifest()
+    return [
+        RegisteredRealSpec(
+            document_id=document["document_id"],
+            markdown_path=document["markdown_path"],
+            content_list_v2_path=document["content_list_v2_path"],
+            image_dir=document["image_dir"],
+        )
+        for document in manifest.get("documents", [])
+    ]
 
 
 def generate_requirement_bundle(
