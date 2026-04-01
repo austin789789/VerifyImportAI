@@ -67,6 +67,39 @@ def test_extract_markdown_sections_from_real_spec_fixture() -> None:
     assert [ref["page"] for ref in items[6]["source_refs"]] == [2, 3, 4]
 
 
+def test_extract_markdown_sections_from_manifest_registered_document_id() -> None:
+    client = make_memory_client()
+
+    response = client.post(
+        "/pipelines/markdown-specs/extract",
+        json={
+            "document_id": "triumph-s6867-07",
+        },
+    )
+
+    assert response.status_code == 201
+    items = response.json()["items"]
+    assert items[0]["id"] == "S-triumph-s6867-07-sec_001"
+    assert items[6]["title"] == "Operation"
+
+
+def test_extract_markdown_sections_rejects_unknown_manifest_document_id() -> None:
+    client = make_memory_client()
+
+    response = client.post(
+        "/pipelines/markdown-specs/extract",
+        json={
+            "document_id": "unknown-real-spec",
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": "document_id unknown-real-spec is not registered in fixtures/real_spec_assets.json",
+        "detail": None,
+    }
+
+
 def test_tracked_real_spec_image_references_exist() -> None:
     tracked_refs = _content_list_image_paths(TRIUMPH_SPEC_PATH.with_name("S6867_07_content_list_v2.json"))
     tracked_refs.update(_content_list_image_paths(KAWASAKI_SPEC_PATH.with_name("全体要件_content_list_v2.json")))

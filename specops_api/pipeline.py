@@ -22,12 +22,13 @@ from .repository import Repository, next_id
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+REAL_SPEC_ASSET_MANIFEST_PATH = REPO_ROOT / "fixtures" / "real_spec_assets.json"
 HEADING_PATTERN = re.compile(r"^#\s+(\d+)\s+(.+?)\s*$", re.MULTILINE)
 SECTION_TITLE_PATTERN = re.compile(r"^\s*(\d+)[\.\s]+(.+?)\s*$")
 
 
 def extract_markdown_sections(request: CreateMarkdownExtractionRequest, repository: Repository) -> list[SpecSection]:
-    markdown_path = _resolve_repo_path(request.markdown_path)
+    markdown_path = _resolve_markdown_path(request)
     content_list_path = markdown_path.with_name(f"{markdown_path.stem}_content_list_v2.json")
     if content_list_path.exists():
         sections = _extract_sections_from_content_list(request.document_id, content_list_path)
@@ -87,6 +88,33 @@ def generate_requirement_bundle(
     )
     requirement = repository.patch_requirement(requirement.id, None, None, None, audit.id)
     return RequirementBundleResponse(note=note, requirement=requirement, audit_rationale=audit)
+
+
+def _resolve_markdown_path(request: CreateMarkdownExtractionRequest) -> Path:
+    if request.markdown_path:
+        return _resolve_repo_path(request.markdown_path)
+
+    manifest = _load_real_spec_asset_manifest()
+    for document in manifest.get("documents", []):
+        if document.get("document_id") == request.document_id:
+            manifest_path = document.get("markdown_path")
+            if not manifest_path:
+                break
+            return _resolve_repo_path(str(REPO_ROOT / manifest_path))
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"document_id {request.document_id} is not registered in fixtures/real_spec_assets.json",
+    )
+
+
+def _load_real_spec_asset_manifest() -> dict:
+    if not REAL_SPEC_ASSET_MANIFEST_PATH.exists():
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="fixtures/real_spec_assets.json not found",
+        )
+    return json.loads(REAL_SPEC_ASSET_MANIFEST_PATH.read_text(encoding="utf-8"))
 
 
 def _resolve_repo_path(raw_path: str) -> Path:

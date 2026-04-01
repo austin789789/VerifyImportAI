@@ -281,7 +281,13 @@ class ErrorResponse(BaseModel):
 
 class CreateMarkdownExtractionRequest(BaseModel):
     document_id: str
-    markdown_path: str
+    markdown_path: str | None = None
+
+    @model_validator(mode="after")
+    def validate_markdown_source(self) -> "CreateMarkdownExtractionRequest":
+        if not self.document_id.strip():
+            raise ValueError("document_id is required")
+        return self
 
 
 class ExtractedSpecSectionsResponse(BaseModel):
