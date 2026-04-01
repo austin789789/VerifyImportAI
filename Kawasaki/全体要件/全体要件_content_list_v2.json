@@ -1,0 +1,371 @@
+[
+    [
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "全体要件"
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                85,
+                65,
+                169,
+                80
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "1. テストスペック"
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                85,
+                82,
+                193,
+                93
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "テストスペック49245-1528を満足すること"
+                    }
+                ]
+            },
+            "bbox": [
+                107,
+                96,
+                384,
+                109
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "2. 最低動作電圧"
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                85,
+                124,
+                208,
+                137
+            ]
+        },
+        {
+            "type": "table",
+            "content": {
+                "image_source": {
+                    "path": "images/8c3dc49bb415bf5cffebfcb9be0d4d4ef6f3896f2b8d27013a80af34dc729ec7.jpg"
+                },
+                "table_caption": [],
+                "table_footnote": [],
+                "html": "<table><tr><td>最低動作電圧</td><td>7.5 [V]</td></tr></table>",
+                "table_type": "simple_table",
+                "table_nest_level": 1
+            },
+            "bbox": [
+                107,
+                139,
+                430,
+                158
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "注）上記電圧以下も、法規で表示が義務付けられている機能項目については、通常動作が可能な限り通常動作すること通常動作ができない電圧まで入力電圧が低下した場合は、原則IG-OFF時と同じ動作をすることバッテリ警告表示は「バッテリ警告」に既定の条件に従うこと"
+                    }
+                ]
+            },
+            "bbox": [
+                107,
+                159,
+                882,
+                202
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "3. 暗電流"
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                85,
+                217,
+                159,
+                230
+            ]
+        },
+        {
+            "type": "table",
+            "content": {
+                "image_source": {
+                    "path": "images/ac0e13e644e2797a75ad35fb968735c0ca7e42ee98aa0202966b1373a14b6b63.jpg"
+                },
+                "table_caption": [],
+                "table_footnote": [],
+                "html": "<table><tr><td>任意リーナイズOFF時</td><td>0.8 [mA] (MAX) at 13 [V] (TYP 0.6 [mA] at 13 [V])</td></tr><tr><td>任意リーナイズON時</td><td>6.25 [mA] × 24 [hr] = 150 [mAh] 以下</td></tr></table>",
+                "table_type": "simple_table",
+                "table_nest_level": 1
+            },
+            "bbox": [
+                107,
+                230,
+                749,
+                269
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "4. CAN終端抵抗 "
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                85,
+                284,
+                208,
+                297
+            ]
+        },
+        {
+            "type": "table",
+            "content": {
+                "image_source": {
+                    "path": "images/95fb8c43e59b091d6f8b29b9b23b0e9434159c97b50309af9bd2a28a7a8621fd.jpg"
+                },
+                "table_caption": [],
+                "table_footnote": [],
+                "html": "<table><tr><td>終端抵抗</td><td>124 [Ω] ±1 [%]</td></tr></table>",
+                "table_type": "simple_table",
+                "table_nest_level": 1
+            },
+            "bbox": [
+                107,
+                297,
+                430,
+                317
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "5. バッテリ瞬断"
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                85,
+                332,
+                188,
+                346
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "バッテリ瞬断時の挙動を評価する際は、下記波形を適用すること"
+                    }
+                ]
+            },
+            "bbox": [
+                107,
+                347,
+                519,
+                360
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "引用規格: JASO D007-98 8.1.4"
+                    }
+                ]
+            },
+            "bbox": [
+                109,
+                362,
+                352,
+                375
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "電圧波形:"
+                    }
+                ]
+            },
+            "bbox": [
+                109,
+                376,
+                183,
+                390
+            ]
+        },
+        {
+            "type": "image",
+            "content": {
+                "image_source": {
+                    "path": "images/6ff09d4a423ecd24d93c6880fc3a779e13f4e13b33761bee0938647133df4c16.jpg"
+                },
+                "image_caption": [],
+                "image_footnote": []
+            },
+            "bbox": [
+                186,
+                403,
+                526,
+                542
+            ]
+        },
+        {
+            "type": "equation_interline",
+            "content": {
+                "math_content": "\\begin{array}{l} \\mathrm {U B} = 1 2 \\mathrm {V} \\\\ V a = - 5. 7 V \\\\ V S = - 7 V \\\\ \\mathrm {t r} = 5 \\mathrm {m s} \\\\ t 6 = 1 5 \\mathrm {m s} \\text {a n d} 4 0 \\mathrm {m s} \\\\ t 7 = 5 0 m s \\\\ t 8 = 0. 5 s a n d 2 0 s \\\\ \\end{array}",
+                "math_type": "latex",
+                "image_source": {
+                    "path": "images/57ae6c8fdf768197867d5c5053fa9e696ee4b07afdb08862a8f61bee07f3f869.jpg"
+                }
+            },
+            "bbox": [
+                534,
+                426,
+                682,
+                527
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "ただし、上記波形に限らず、バッテリ瞬断発生時にEEPROM保存内容が書き換えられないこと"
+                    }
+                ]
+            },
+            "bbox": [
+                107,
+                552,
+                702,
+                565
+            ]
+        },
+        {
+            "type": "page_header",
+            "content": {
+                "page_header_content": [
+                    {
+                        "type": "text",
+                        "content": "CONFIDENTIAL "
+                    }
+                ]
+            },
+            "bbox": [
+                413,
+                29,
+                574,
+                43
+            ]
+        },
+        {
+            "type": "page_header",
+            "content": {
+                "page_header_content": [
+                    {
+                        "type": "text",
+                        "content": "Kawasaki Motors, Ltd. "
+                    }
+                ]
+            },
+            "bbox": [
+                736,
+                28,
+                910,
+                42
+            ]
+        },
+        {
+            "type": "page_number",
+            "content": {
+                "page_number_content": [
+                    {
+                        "type": "text",
+                        "content": "14/196 "
+                    }
+                ]
+            },
+            "bbox": [
+                470,
+                957,
+                526,
+                969
+            ]
+        },
+        {
+            "type": "page_footer",
+            "content": {
+                "page_footer_content": [
+                    {
+                        "type": "text",
+                        "content": "2199_メータ機能仕様書"
+                    }
+                ]
+            },
+            "bbox": [
+                742,
+                954,
+                912,
+                969
+            ]
+        }
+    ]
+]

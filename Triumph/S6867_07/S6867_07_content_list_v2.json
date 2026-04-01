@@ -1,0 +1,1471 @@
+[
+    [
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "1 Overview "
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                16,
+                16,
+                148,
+                40
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "The Trip Computer Distance to Empty function calculates an estimate of the number of miles or kilometres, which can be travelled on the remaining volume of fuel in the tank. "
+                    }
+                ]
+            },
+            "bbox": [
+                12,
+                53,
+                962,
+                97
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "After battery connection “Distance to Empty” uses a starting value for the “Instantaneous Fuel Consumption” (determined by diagnostic command, default 4.70l/100km, equivalent to 50 mpg uk/60 mpg us). "
+                    }
+                ]
+            },
+            "bbox": [
+                12,
+                101,
+                976,
+                145
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "The calculation will become more accurate over time, such that “Distance to Empty” will be calculated based on the riding style and economy of the individual rider. "
+                    }
+                ]
+            },
+            "bbox": [
+                12,
+                149,
+                976,
+                193
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "2 Input Signals "
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                14,
+                215,
+                192,
+                239
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "The Trip Computer Distance to Empty function uses the following input signals; "
+                    }
+                ]
+            },
+            "bbox": [
+                16,
+                250,
+                718,
+                271
+            ]
+        },
+        {
+            "type": "table",
+            "content": {
+                "image_source": {
+                    "path": "images/2558b1edc9c53e16812ab317939c2f93b48bd8b87222b868718302d4c317bd9f.jpg"
+                },
+                "table_caption": [],
+                "table_footnote": [],
+                "html": "<table><tr><td>Input</td><td>Source</td><td>Reference</td></tr><tr><td>Fuel Remaining (litres)</td><td>CAN</td><td>CAN Spec (model specific – see part drawing for document reference and issue level)</td></tr><tr><td>Vehicle Speed</td><td>CAN</td><td>CAN Spec (model specific – see part drawing for document reference and issue level)</td></tr><tr><td>Fuel Consumption</td><td>CAN</td><td>CAN Spec (model specific – see part drawing for document reference and issue level)</td></tr><tr><td>INTERNAL_OPERATING_MODE</td><td>Internal</td><td>S6811 (see part drawing for issue level)</td></tr></table>",
+                "table_type": "simple_table",
+                "table_nest_level": 1
+            },
+            "bbox": [
+                10,
+                271,
+                990,
+                452
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "3 EEPROM Locations "
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                14,
+                470,
+                264,
+                494
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "The Trip Computer Distance to Empty function uses the following EEPROM variables; "
+                    }
+                ]
+            },
+            "bbox": [
+                14,
+                507,
+                778,
+                529
+            ]
+        },
+        {
+            "type": "table",
+            "content": {
+                "image_source": {
+                    "path": "images/10a74d2515e93db31281072462fb458243f3954888da202c061d39d47582a5f8.jpg"
+                },
+                "table_caption": [],
+                "table_footnote": [],
+                "html": "<table><tr><td>EEPROM Variable</td><td>Description</td><td>Reference</td></tr><tr><td>EEPROMMARKET_VARIATION</td><td>Decides on units to use</td><td>S6871</td></tr><tr><td>EEPROM_TRIP_RANGE_IFCN_DEFAULT</td><td>Default value to be included in software, changes (if required) to be programmed at end of line (Triumph production)</td><td>Default = 5Eh (4.70 l/100km)\nMin = 00h, Max = FFh, Resolution = 0.05 l/100km</td></tr><tr><td>EEPROM_TRIP_RANGE_KD_DEFAULT</td><td>Default value to be included in software, changes (if required) to be programmed at end of line (Triumph production)</td><td>Default = 64h (10000)\nMin = 00h, Max = FFh, Resolution = 100</td></tr><tr><td>EEPROM_TRIP_RANGE_IFCN_MIN</td><td>Default value to be included in software, changes (if required) to be programmed at end of line (Triumph production)</td><td>Default = 0h (disabled)\nMin = 00h, Max = FFh, Resolution = 0.05 l/100km</td></tr><tr><td>EEPROM_TRIP_RANGE_DIST_MAX_KM</td><td>Default value to be included in software, changes (if required) to be programmed at end of line (Triumph production)</td><td>Default = 30h (480 km)\nMin = 00h, Max = FFh, Resolution = 10 km</td></tr><tr><td>EEPROM_TRIP_RANGE_DIST_MAX_MILES</td><td>Default value to be included in software, changes (if required) to be programmed at end of line (Triumph production)</td><td>Default = 1Eh (300 miles)\nMin = 00h, Max = FFh, Resolution = 10 miles</td></tr><tr><td>EEPROM_TRIP_RANGE_CALC_LIMIT</td><td>Default value to be included in software, changes (if required) to be programmed at end of line (Triumph production)</td><td>Default = 32h (5 km/h)\nMin = 00h, Max = FFh, Resolution = 0.1 km/h</td></tr></table>",
+                "table_type": "simple_table",
+                "table_nest_level": 1
+            },
+            "bbox": [
+                10,
+                527,
+                990,
+                985
+            ]
+        }
+    ],
+    [
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "4 Constant Block "
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                8,
+                3,
+                214,
+                24
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "None used in this function "
+                    }
+                ]
+            },
+            "bbox": [
+                8,
+                37,
+                246,
+                56
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "5 Output Signals "
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                8,
+                80,
+                206,
+                106
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "The Trip Computer Odometer function drives the following output signals; "
+                    }
+                ]
+            },
+            "bbox": [
+                8,
+                113,
+                670,
+                135
+            ]
+        },
+        {
+            "type": "table",
+            "content": {
+                "image_source": {
+                    "path": "images/c04c1f52130ff37ca309f060f3d64f5dd384c3d5623729521deb2b37316830d2.jpg"
+                },
+                "table_caption": [],
+                "table_footnote": [],
+                "html": "<table><tr><td>Output</td><td>Destination</td><td>Resolution</td></tr><tr><td>INTERNAL_TRIP_RANGE_IFCN</td><td>Internal</td><td>1 bit = 0.01 I/100km</td></tr><tr><td>INTERNAL_TRIP_RANGE_DIST_CALC</td><td>Internal</td><td>1 bit = 0.01 km</td></tr><tr><td>INTERNAL_TRIP_RANGE_DISTDISPLAY</td><td>Internal</td><td>1 bit = 0.1 km or 0.1 mile</td></tr><tr><td>Range to Empty Dist</td><td>CAN</td><td>CAN Spec (model specific – see part drawing for document reference and issue level)</td></tr><tr><td>Range to Empty ØIFC</td><td>CAN</td><td>CAN Spec (model specific – see part drawing for document reference and issue level)</td></tr><tr><td>Range to Empty ØIFC Frozen</td><td>CAN</td><td>CAN Spec (model specific – see part drawing for document reference and issue level)</td></tr></table>",
+                "table_type": "simple_table",
+                "table_nest_level": 1
+            },
+            "bbox": [
+                4,
+                135,
+                995,
+                350
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "6 Initial Operation "
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                8,
+                370,
+                220,
+                395
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "If INTERNAL_OPERATING_MODE "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "="
+                    },
+                    {
+                        "type": "text",
+                        "content": "ONE (1) or TWO (2) set “Trip Range IFCN Prev” = EEPROM_TRIP_RANGE_IFCN_DEFAULT. "
+                    }
+                ]
+            },
+            "bbox": [
+                8,
+                403,
+                811,
+                448
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "7 Operation "
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                8,
+                467,
+                149,
+                492
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "If INTERNAL_OPERATING_MODE "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "="
+                    },
+                    {
+                        "type": "text",
+                        "content": "THREE (3) the Range to Empty calculation shall be carried out using the CAN data of Fuel Remaining (litres) and Fuel Consumption along with continuously calculated values of “INTERNAL_TRIP_RANGE_IFCN”. "
+                    }
+                ]
+            },
+            "bbox": [
+                8,
+                500,
+                975,
+                565
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "The Range to Empty calculation uses the following terminology for inputs and outputs: "
+                    }
+                ]
+            },
+            "bbox": [
+                10,
+                567,
+                783,
+                590
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "equation_inline",
+                        "content": "V ="
+                    },
+                    {
+                        "type": "text",
+                        "content": "“Fuel Remaining (litres)” "
+                    }
+                ]
+            },
+            "bbox": [
+                153,
+                594,
+                419,
+                615
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "The volume of fuel reported to be in the fuel tank from ECU in units litres (see CAN spec). "
+                    }
+                ]
+            },
+            "bbox": [
+                196,
+                615,
+                941,
+                656
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "?????? = “Fuel Consumption” "
+                    }
+                ]
+            },
+            "bbox": [
+                135,
+                661,
+                378,
+                683
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "The instantaneous value from ECU in units l/100km (see CAN spec). "
+                    }
+                ]
+            },
+            "bbox": [
+                196,
+                683,
+                813,
+                704
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "equation_inline",
+                        "content": "\\varnothing I F C _ { n } ="
+                    },
+                    {
+                        "type": "text",
+                        "content": "INTERNAL_TRIP_RANGE_IFCN "
+                    }
+                ]
+            },
+            "bbox": [
+                113,
+                708,
+                500,
+                729
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "New average instantaneous fuel consumption in units l/100km. "
+                    }
+                ]
+            },
+            "bbox": [
+                196,
+                729,
+                759,
+                750
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "equation_inline",
+                        "content": "\\varnothing I F C _ { n _ { C a l c } } ="
+                    },
+                    {
+                        "type": "text",
+                        "content": "“Trip Range IFCN Calc”, used only by this function (see note). "
+                    }
+                ]
+            },
+            "bbox": [
+                82,
+                754,
+                751,
+                777
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "Calculated average instantaneous fuel consumption in units l/100km. "
+                    }
+                ]
+            },
+            "bbox": [
+                196,
+                779,
+                815,
+                798
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "equation_inline",
+                        "content": "\\varnothing I F C _ { n - 1 } ="
+                    },
+                    {
+                        "type": "text",
+                        "content": "“Trip Range IFCN Prev”, used only by this function (see note). "
+                    }
+                ]
+            },
+            "bbox": [
+                95,
+                804,
+                753,
+                825
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "Previous average instantaneous fuel consumption in units l/100km. "
+                    }
+                ]
+            },
+            "bbox": [
+                196,
+                825,
+                797,
+                846
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "equation_inline",
+                        "content": "k _ { d } ="
+                    },
+                    {
+                        "type": "text",
+                        "content": "EEPROM_TRIP_RANGE_KD_DEFAULT "
+                    }
+                ]
+            },
+            "bbox": [
+                147,
+                850,
+                572,
+                871
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "An integer (typical value 10000) which damps the effect of ?????? when calculating "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "\\varnothing I F C _ { n }"
+                    }
+                ]
+            },
+            "bbox": [
+                196,
+                871,
+                977,
+                893
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "equation_inline",
+                        "content": "\\varnothing I F C _ { n _ { M i n } } ="
+                    },
+                    {
+                        "type": "text",
+                        "content": "EEPROM_TRIP_RANGE_IFCN_MIN "
+                    }
+                ]
+            },
+            "bbox": [
+                85,
+                898,
+                536,
+                921
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "A minimum limit at which new IFC values are disregarded in units l/100km. "
+                    }
+                ]
+            },
+            "bbox": [
+                196,
+                921,
+                866,
+                941
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "equation_inline",
+                        "content": "D i s t _ { M a x _ { k m } } ="
+                    },
+                    {
+                        "type": "text",
+                        "content": "EEPROM_TRIP_RANGE_DIST_MAX_KM "
+                    }
+                ]
+            },
+            "bbox": [
+                80,
+                946,
+                582,
+                969
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "A maximum value (distance) that may be displayed in units km. "
+                    }
+                ]
+            },
+            "bbox": [
+                196,
+                971,
+                765,
+                992
+            ]
+        }
+    ],
+    [
+        {
+            "type": "equation_interline",
+            "content": {
+                "math_content": "\\begin{array}{l} D i s t _ {M a x _ {m i l e s}} = E E P R O M \\_ T R I P \\_ R A N G E \\_ D I S T \\_ M A X \\_ M I L E S \\\\ \\hskip 1 4. 2 2 6 3 7 8 p t A \\text {m a x i m u m v a l u e (d i s t a n c e) t h a t m a y b e d i s p l a y e d i n u n i t s m i l e s}. \\end{array}",
+                "math_type": "latex",
+                "image_source": {
+                    "path": "images/4edb00188856b5dddf12f5042d59ecfb5381c7ef561b45192927ae4d6c374896.jpg"
+                }
+            },
+            "bbox": [
+                64,
+                0,
+                784,
+                46
+            ]
+        },
+        {
+            "type": "equation_interline",
+            "content": {
+                "math_content": "D i s t _ {C a l c} = I N T e r N A L _ {T} R I P _ {R} A N G E _ {D} I S T _ {C} A L C",
+                "math_type": "latex",
+                "image_source": {
+                    "path": "images/6e46118c975f15a9992759d204ce6e07c8c7a70ada56f2cba623e5679e2da9cc.jpg"
+                }
+            },
+            "bbox": [
+                95,
+                50,
+                563,
+                71
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "The calculated distance in units km. "
+                    }
+                ]
+            },
+            "bbox": [
+                196,
+                73,
+                517,
+                91
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "Note that the values of "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "\\varnothing I F C _ { n }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "and "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "\\varnothing I F C _ { n - 1 }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "must be stored by the instrument pack when the ignition is switched off (INTERNAL_OPERATING_MODE changes from THREE (3) to FOUR (4)) so that the output of the Range to Empty calculation is the same when the ignition is next switched on (INTERNAL_OPERATING_MODE changes from FOUR (4) or FIVE (5) to THREE (3)). "
+                    }
+                ]
+            },
+            "bbox": [
+                4,
+                123,
+                975,
+                207
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "The Range to Empty value shall be calculated as described in the following steps: "
+                    }
+                ]
+            },
+            "bbox": [
+                4,
+                212,
+                742,
+                232
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "1. This step depends upon the value of “Vehicle Speed”: "
+                    }
+                ]
+            },
+            "bbox": [
+                64,
+                232,
+                580,
+                252
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "a. If “Vehicle Speed” ≥ EEPROM_TRIP_RANGE_CALC_LIMIT, then whenever a new value of “Fuel Consumption” is received it shall be used to determine the value of Calculated Average Instantaneous Fuel Consumption: "
+                    }
+                ]
+            },
+            "bbox": [
+                119,
+                252,
+                977,
+                314
+            ]
+        },
+        {
+            "type": "equation_interline",
+            "content": {
+                "math_content": "\\varnothing I F C _ {n _ {C a l c}} = \\varnothing I F C _ {n - 1} + \\left(\\frac {I F C - \\varnothing I F C _ {n - 1}}{k _ {d}}\\right)",
+                "math_type": "latex",
+                "image_source": {
+                    "path": "images/82cad14c65cfc5d6a664545e1bb27f566a9d40f4f4c23870a731aa38f2a3d9ee.jpg"
+                }
+            },
+            "bbox": [
+                233,
+                314,
+                600,
+                359
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "b. If “Vehicle Speed” "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "<"
+                    },
+                    {
+                        "type": "text",
+                        "content": "EEPROM_TRIP_RANGE_CALC_LIMIT, then any new value of “Fuel Consumption” shall be ignored and the previous value shall be used: "
+                    }
+                ]
+            },
+            "bbox": [
+                119,
+                359,
+                906,
+                400
+            ]
+        },
+        {
+            "type": "equation_interline",
+            "content": {
+                "math_content": "\\varnothing I F C _ {n _ {C a l c}} = \\varnothing I F C _ {n - 1}",
+                "math_type": "latex",
+                "image_source": {
+                    "path": "images/5d6483db95f9b989808dfc8d39dfb8cbfa32fa9f1653f86cbb8dc492e61adcc8.jpg"
+                }
+            },
+            "bbox": [
+                235,
+                400,
+                425,
+                425
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "i.e. "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "\\varnothing I F C _ { n _ { C a l c } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "is not updated and is therefore “frozen” "
+                    }
+                ]
+            },
+            "bbox": [
+                206,
+                425,
+                691,
+                447
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "2. This step depends upon the previous step and the constant value of "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "\\emptyset I F C _ { n _ { M i n } }"
+                    }
+                ]
+            },
+            "bbox": [
+                62,
+                447,
+                799,
+                470
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "a. If the previous step has resulted in the re-use of the previous value, this step shall also be ignored: "
+                    }
+                ]
+            },
+            "bbox": [
+                119,
+                472,
+                959,
+                511
+            ]
+        },
+        {
+            "type": "equation_interline",
+            "content": {
+                "math_content": "\\varnothing I F C _ {n} = \\varnothing I F C _ {n _ {C a l c}} = \\varnothing I F C _ {n - 1}",
+                "math_type": "latex",
+                "image_source": {
+                    "path": "images/452a3df3a8bc1de9bb5ea183ca2adbd0d7d9b5e08277d57c9d6cb03a5b64eb72.jpg"
+                }
+            },
+            "bbox": [
+                233,
+                513,
+                505,
+                536
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "b. If the previous step has resulted in a recalculation of "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "\\varnothing I F C _ { n _ { C a l c } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": ", the value of INTERNAL_TRIP_RANGE_IFCN shall be obtained by comparing EEPROM_TRIP_RANGE_IFCN_MIN with the INTERNAL_TRIP_RANGE_IFCN value: "
+                    }
+                ]
+            },
+            "bbox": [
+                119,
+                536,
+                929,
+                601
+            ]
+        },
+        {
+            "type": "equation_interline",
+            "content": {
+                "math_content": "\\varnothing I F C _ {n} = M a x \\left(\\left(\\varnothing I F C _ {n _ {C a l c}}\\right), \\left(\\varnothing I F C _ {n _ {M i n}}\\right)\\right)",
+                "math_type": "latex",
+                "image_source": {
+                    "path": "images/56293ff7607e552055d23ab2294f7c86895c29f03d5a174f1a3405da4703dcff.jpg"
+                }
+            },
+            "bbox": [
+                235,
+                602,
+                596,
+                633
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "i.e. "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "\\varnothing I F C _ { n _ { C a l c } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "is not updated and is therefore “frozen” "
+                    }
+                ]
+            },
+            "bbox": [
+                206,
+                633,
+                685,
+                656
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "3. The INTERNAL_TRIP_RANGE_DIST_CALC value shall be determined using the “Fuel Remaining (litres)” (??) and INTERNAL_TRIP_RANGE_IFCN "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "( \\emptyset I F C _ { n } )"
+                    },
+                    {
+                        "type": "text",
+                        "content": ": "
+                    }
+                ]
+            },
+            "bbox": [
+                62,
+                656,
+                825,
+                697
+            ]
+        },
+        {
+            "type": "equation_interline",
+            "content": {
+                "math_content": "D i s t _ {C a l c} = \\left(\\frac {V \\times 1 0 0}{\\emptyset I F C _ {n}}\\right)",
+                "math_type": "latex",
+                "image_source": {
+                    "path": "images/559ec855450cdc72b3c376dc6aa6114f418cb16b29032be24be9eccdcfc30352.jpg"
+                }
+            },
+            "bbox": [
+                235,
+                699,
+                427,
+                742
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "4. INTERNAL_TRIP_RANGE_DIST_DISPLAY is calculated from INTERNAL_TRIP_RANGE_DIST (including conversion from km to miles, if required) and comparison constant values of EEPROM_TRIP_RANGE_DIST_MAX_KM or EEPROM_TRIP_RANGE_DIST_MAX_MILES. Conversion from km to miles and constant value used for comparison is dependent upon the units selected for display as determined by EEPROM_MARKET_VARIATION. If EEPROM_MARKET_VARIATION = 00h or 01h, "
+                    }
+                ]
+            },
+            "bbox": [
+                62,
+                742,
+                975,
+                865
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "a. If "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "D i s t _ { M a x _ { m i l e s } } \\neq 0"
+                    },
+                    {
+                        "type": "text",
+                        "content": ", the Distance to Empty value shall be obtained by converting the value of “Trip Range Dist” to miles and comparing the Calculated Distance to Empty value with the preset Maximum Distance to Empty and rounding the result to one decimal place (the resulting resolution of “Trip Range Dist Display” being 0.1mi): "
+                    }
+                ]
+            },
+            "bbox": [
+                119,
+                865,
+                973,
+                951
+            ]
+        },
+        {
+            "type": "equation_interline",
+            "content": {
+                "math_content": "D i s t = M i n \\left(\\left(D i s t _ {M a x _ {m i l e s}}\\right), \\left(D i s t _ {C a l c} \\times \\frac {1 0 0 0 0 0 0}{1 6 0 9 3 4 4}\\right)\\right)",
+                "math_type": "latex",
+                "image_source": {
+                    "path": "images/357114e67fa59e3f0cec0c2c90c1b8258a23ac3991c985fca38509083e795776.jpg"
+                }
+            },
+            "bbox": [
+                233,
+                951,
+                663,
+                989
+            ]
+        }
+    ],
+    [
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "b. If ?????????????? "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "D i s t _ { M a x _ { m i l e s } } = 0"
+                    },
+                    {
+                        "type": "text",
+                        "content": ", the Distance to Empty value shall be obtained by converting the value of “Trip Range Dist” to miles and rounding the result to one decimal place (the resulting resolution of “Trip Range Dist Display” being 0.1mi): "
+                    }
+                ]
+            },
+            "bbox": [
+                122,
+                4,
+                967,
+                93
+            ]
+        },
+        {
+            "type": "equation_interline",
+            "content": {
+                "math_content": "D i s t = \\left(D i s t _ {C a l c} \\times \\frac {1 0 0 0 0 0 0}{1 6 0 9 3 4 4}\\right)",
+                "math_type": "latex",
+                "image_source": {
+                    "path": "images/2584417fbc746bbd21f2519eb412af62e5b093c4c5dbed58bcaa47f9ba91aa26.jpg"
+                }
+            },
+            "bbox": [
+                238,
+                93,
+                476,
+                136
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "If EEPROM_MARKET_VARIATION = 02h or 03h, "
+                    }
+                ]
+            },
+            "bbox": [
+                94,
+                136,
+                543,
+                162
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "c. If ?????????????? "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "D i s t _ { M a x _ { k m } } \\neq 0"
+                    },
+                    {
+                        "type": "text",
+                        "content": ", the Distance to Empty value shall be obtained by comparing the values of “Trip Range Dist” and the Calculated Distance to Empty with the preset Maximum Distance to Empty and rounding the result to one decimal place (the resulting resolution of “Trip Range Dist Display” being 0.1km): "
+                    }
+                ]
+            },
+            "bbox": [
+                122,
+                162,
+                965,
+                277
+            ]
+        },
+        {
+            "type": "equation_interline",
+            "content": {
+                "math_content": "D i s t = M i n \\left(\\left(D i s t _ {M a x _ {k m}}\\right), \\left(D i s t _ {C a l c}\\right)\\right)",
+                "math_type": "latex",
+                "image_source": {
+                    "path": "images/6f647d3854673f8c356dfebc72e4a6c0d2ef62606435fd9ae805cbe0d532d6aa.jpg"
+                }
+            },
+            "bbox": [
+                236,
+                279,
+                561,
+                320
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "d. If "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "D i s t _ { M a x _ { k m } } = 0"
+                    },
+                    {
+                        "type": "text",
+                        "content": ", the Distance to Empty value shall be the value of “Trip Range Dist” rounded to one decimal place (the resulting resolution of “Trip Range Dist Display” being 0.1km): "
+                    }
+                ]
+            },
+            "bbox": [
+                122,
+                320,
+                981,
+                380
+            ]
+        },
+        {
+            "type": "equation_interline",
+            "content": {
+                "math_content": "D i s t = \\left(D i s t _ {C a l c}\\right)",
+                "math_type": "latex",
+                "image_source": {
+                    "path": "images/effb60eefc5b9244b8dab9f70980a94b0a561d7233e6bd23fcf48fdcf25022cb.jpg"
+                }
+            },
+            "bbox": [
+                525,
+                380,
+                681,
+                409
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "When EEPROM_MARKET_VARIATION changes, the value of “Dist” must be recalculated. To allow development and continuous improvement activities, the calculated distance to empty (in kilometres), the current value of "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "\\varnothing I F C _ { n }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "used and the status of "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "\\varnothing I F C _ { n }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "(i.e. frozen or calculated) shall be output onto CAN via the signals “Range to Empty Dist”, “Range to Empty ØIFC” and “Range to Empty ØIFC Frozen” respectively. "
+                    }
+                ]
+            },
+            "bbox": [
+                6,
+                413,
+                975,
+                526
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "8 Error Handling and Recovery Conditions "
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                10,
+                552,
+                501,
+                588
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "The following Error Handling shall be carried out: "
+                    }
+                ]
+            },
+            "bbox": [
+                10,
+                593,
+                450,
+                622
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "1. "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "\\varnothing I F C _ { n _ { C a l c } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "shall be frozen if: "
+                    }
+                ]
+            },
+            "bbox": [
+                68,
+                629,
+                344,
+                660
+            ]
+        },
+        {
+            "type": "list",
+            "content": {
+                "list_type": "text_list",
+                "list_items": [
+                    {
+                        "item_type": "text",
+                        "item_content": [
+                            {
+                                "type": "text",
+                                "content": "• CAN message containing the signal “Vehicle Speed” is missing after a valid value has been received, or the signal is out of range, "
+                            }
+                        ]
+                    },
+                    {
+                        "item_type": "text",
+                        "item_content": [
+                            {
+                                "type": "text",
+                                "content": "• CAN message containing the signal “Fuel consumption” is missing after a valid value has been received, or the signal is out of range. "
+                            }
+                        ]
+                    }
+                ]
+            },
+            "bbox": [
+                108,
+                662,
+                967,
+                770
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "2. The display shall show no distance value (instead dashes, i.e. “- - -“, shall be displayed) if: "
+                    }
+                ]
+            },
+            "bbox": [
+                64,
+                772,
+                899,
+                801
+            ]
+        },
+        {
+            "type": "list",
+            "content": {
+                "list_type": "text_list",
+                "list_items": [
+                    {
+                        "item_type": "text",
+                        "item_content": [
+                            {
+                                "type": "text",
+                                "content": "• CAN message containing the signal “Vehicle Speed” is missing at ignition on, "
+                            }
+                        ]
+                    },
+                    {
+                        "item_type": "text",
+                        "item_content": [
+                            {
+                                "type": "text",
+                                "content": "• CAN message containing the signal “Fuel consumption” is missing at ignition on, "
+                            }
+                        ]
+                    },
+                    {
+                        "item_type": "text",
+                        "item_content": [
+                            {
+                                "type": "text",
+                                "content": "• CAN message containing signal “Fuel remaining (litres)” is missing or the signal is out of range, "
+                            }
+                        ]
+                    },
+                    {
+                        "item_type": "text",
+                        "item_content": [
+                            {
+                                "type": "text",
+                                "content": "• There is an error calculating the value of distance to empty, "
+                            }
+                        ]
+                    },
+                    {
+                        "item_type": "text",
+                        "item_content": [
+                            {
+                                "type": "equation_inline",
+                                "content": "\\bullet \\varnothing I F C _ { n _ { C a l c } }"
+                            },
+                            {
+                                "type": "text",
+                                "content": "is calculated to be 0 (zero), "
+                            }
+                        ]
+                    },
+                    {
+                        "item_type": "text",
+                        "item_content": [
+                            {
+                                "type": "text",
+                                "content": "• There is an EEPROM error relating to the distance to empty function. "
+                            }
+                        ]
+                    }
+                ]
+            },
+            "bbox": [
+                108,
+                803,
+                971,
+                978
+            ]
+        }
+    ]
+]
