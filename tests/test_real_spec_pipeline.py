@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -21,6 +22,17 @@ def make_memory_client() -> TestClient:
 
 def make_sqlite_client(db_path: Path) -> TestClient:
     return TestClient(create_app(SQLiteRepository(db_path)))
+
+
+def _content_list_image_paths(content_list_path: Path) -> set[Path]:
+    pages = json.loads(content_list_path.read_text(encoding="utf-8"))
+    image_paths: set[Path] = set()
+    for page in pages:
+        for item in page:
+            raw_path = item.get("content", {}).get("image_source", {}).get("path")
+            if raw_path:
+                image_paths.add(content_list_path.parent / raw_path)
+    return image_paths
 
 
 def test_extract_markdown_sections_from_real_spec_fixture() -> None:
@@ -48,6 +60,15 @@ def test_extract_markdown_sections_from_real_spec_fixture() -> None:
     assert items[6]["title"] == "Operation"
     assert "Range to Empty calculation shall be carried out" in items[6]["text"]
     assert [ref["page"] for ref in items[6]["source_refs"]] == [2, 3, 4]
+
+
+def test_tracked_real_spec_image_references_exist() -> None:
+    tracked_refs = _content_list_image_paths(TRIUMPH_SPEC_PATH.with_name("S6867_07_content_list_v2.json"))
+    tracked_refs.update(_content_list_image_paths(KAWASAKI_SPEC_PATH.with_name("全体要件_content_list_v2.json")))
+
+    assert tracked_refs
+    missing_refs = sorted(str(path) for path in tracked_refs if not path.exists())
+    assert missing_refs == []
 
 
 def test_triumph_real_spec_extraction_retains_equations_as_math_warnings() -> None:
