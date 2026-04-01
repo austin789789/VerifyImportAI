@@ -50,6 +50,27 @@ def test_extract_markdown_sections_from_real_spec_fixture() -> None:
     assert [ref["page"] for ref in items[6]["source_refs"]] == [2, 3, 4]
 
 
+def test_triumph_real_spec_extraction_retains_equations_as_math_warnings() -> None:
+    client = make_memory_client()
+
+    response = client.post(
+        "/pipelines/markdown-specs/extract",
+        json={
+            "document_id": "triumph-s6867-07",
+            "markdown_path": str(TRIUMPH_SPEC_PATH),
+        },
+    )
+
+    assert response.status_code == 201
+    items = response.json()["items"]
+    operation = items[6]
+
+    assert operation["section_key"] == "sec_007"
+    assert "math content retained as extracted text" in operation["parser_warnings"]
+    assert "D i s t _ {M a x _ {m i l e s}}" in operation["text"]
+    assert "D i s t _ {C a l c}" in operation["text"]
+
+
 def test_generate_requirement_bundle_from_extracted_real_spec_section() -> None:
     client = make_memory_client()
     extract_response = client.post(
@@ -199,6 +220,28 @@ def test_extract_and_generate_bundle_from_kawasaki_japanese_spec() -> None:
     assert payload["note"]["summary"] == "テストスペック49245-1528を満足すること"
     assert payload["requirement"]["statement"] == "テストスペック49245-1528を満足すること"
     assert payload["audit_rationale"]["source_refs"][0]["page"] == 1
+
+
+def test_kawasaki_real_spec_extraction_retains_table_image_and_math_content() -> None:
+    client = make_memory_client()
+
+    response = client.post(
+        "/pipelines/markdown-specs/extract",
+        json={
+            "document_id": "kawasaki-global-req",
+            "markdown_path": str(KAWASAKI_SPEC_PATH),
+        },
+    )
+
+    assert response.status_code == 201
+    items = response.json()["items"]
+    battery_instant_drop = items[4]
+
+    assert battery_instant_drop["section_key"] == "sec_005"
+    assert "image reference retained as markdown" in battery_instant_drop["parser_warnings"]
+    assert "math content retained as extracted text" in battery_instant_drop["parser_warnings"]
+    assert "![](images/" in battery_instant_drop["text"]
+    assert "\\mathrm {U B} = 1 2 \\mathrm {V}" in battery_instant_drop["text"]
 
 
 def test_kawasaki_real_spec_bundle_can_flow_through_review_export_and_test_generation() -> None:

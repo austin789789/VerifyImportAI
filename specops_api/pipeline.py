@@ -248,7 +248,7 @@ def _extract_item_text(item: dict) -> tuple[str, set[str]]:
     if item_type == "table":
         warnings.add("table content retained as inline html")
         return content.get("html", "").strip(), warnings
-    if item_type == "math":
+    if item_type in {"math", "equation_interline"}:
         warnings.add("math content retained as extracted text")
         return content.get("math_content", "").strip(), warnings
     if item_type == "image":
