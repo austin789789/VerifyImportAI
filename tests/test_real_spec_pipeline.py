@@ -305,6 +305,129 @@ def test_direct_bundle_generation_can_flow_through_sqlite_lifecycle(tmp_path: Pa
     assert trace["audit_rationale_id"] == audit_id
 
 
+def test_kawasaki_direct_bundle_generation_can_flow_through_review_export_and_test_generation() -> None:
+    client = make_memory_client()
+
+    bundle_response = client.post(
+        "/pipelines/markdown-specs/kawasaki-global-req/sections/sec_001/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+    assert bundle_response.status_code == 201
+
+    payload = bundle_response.json()
+    requirement_id = payload["requirement"]["id"]
+    audit_id = payload["audit_rationale"]["id"]
+
+    submit_response = client.post(
+        f"/requirements/{requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a", "review_note": "ready from kawasaki direct bundle path"},
+    )
+    assert submit_response.status_code == 200
+
+    approve_response = client.post(
+        "/reviews",
+        json={
+            "artifact_id": requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Approved from Kawasaki direct bundle path.",
+        },
+    )
+    assert approve_response.status_code == 201
+    assert approve_response.json()["artifact"]["status"] == "APPROVED"
+    assert approve_response.json()["artifact"]["audit_rationale_id"] == audit_id
+
+    export_response = client.post(
+        "/exports/codebeamer",
+        json={"requirement_id": requirement_id, "requested_by": "user-a"},
+    )
+    assert export_response.status_code == 200
+    assert export_response.json()["status"] == "QUEUED"
+
+    generate_response = client.post(f"/requirements/{requirement_id}/generate-test-requirement")
+    assert generate_response.status_code == 201
+    generated = generate_response.json()
+    assert generated["artifact_type"] == "test_requirement"
+    assert generated["source_requirement_ids"] == [requirement_id]
+
+
+def test_kawasaki_direct_bundle_generation_can_flow_through_sqlite_lifecycle(tmp_path: Path) -> None:
+    db_path = tmp_path / "kawasaki-direct-bundle-sqlite.db"
+    client = make_sqlite_client(db_path)
+
+    bundle_response = client.post(
+        "/pipelines/markdown-specs/kawasaki-global-req/sections/sec_001/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+    assert bundle_response.status_code == 201
+
+    payload = bundle_response.json()
+    requirement_id = payload["requirement"]["id"]
+    note_id = payload["note"]["id"]
+    audit_id = payload["audit_rationale"]["id"]
+
+    submit_response = client.post(
+        f"/requirements/{requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a", "review_note": "ready from kawasaki sqlite direct path"},
+    )
+    assert submit_response.status_code == 200
+
+    approve_response = client.post(
+        "/reviews",
+        json={
+            "artifact_id": requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Approved from Kawasaki sqlite direct bundle path.",
+        },
+    )
+    assert approve_response.status_code == 201
+    assert approve_response.json()["artifact"]["audit_rationale_id"] == audit_id
+
+    export_response = client.post(
+        "/exports/codebeamer",
+        json={"requirement_id": requirement_id, "requested_by": "user-a"},
+    )
+    assert export_response.status_code == 200
+    assert export_response.json()["status"] == "QUEUED"
+
+    generate_response = client.post(f"/requirements/{requirement_id}/generate-test-requirement")
+    assert generate_response.status_code == 201
+    test_requirement_id = generate_response.json()["id"]
+
+    client_reloaded = make_sqlite_client(db_path)
+
+    note_response = client_reloaded.get(f"/notes/{note_id}")
+    assert note_response.status_code == 200
+    assert note_response.json()["source_spec_ids"] == ["S-kawasaki-global-req-sec_001"]
+
+    requirement_response = client_reloaded.get(f"/requirements/{requirement_id}")
+    assert requirement_response.status_code == 200
+    assert requirement_response.json()["status"] == "APPROVED"
+    assert requirement_response.json()["audit_rationale_id"] == audit_id
+
+    test_requirement_response = client_reloaded.get(f"/test-requirements/{test_requirement_id}")
+    assert test_requirement_response.status_code == 200
+    assert test_requirement_response.json()["source_requirement_ids"] == [requirement_id]
+    assert "テストスペック49245-1528を満足すること" in test_requirement_response.json()["statement"]
+
+    trace_response = client_reloaded.get(f"/trace/{requirement_id}")
+    assert trace_response.status_code == 200
+    trace = trace_response.json()
+    assert note_id in trace["upstream_ids"]
+    assert "S-kawasaki-global-req-sec_001" in trace["upstream_ids"]
+    assert test_requirement_id in trace["downstream_ids"]
+    assert trace["audit_rationale_id"] == audit_id
+
+
 def test_extract_markdown_sections_rejects_unknown_manifest_document_id() -> None:
     client = make_memory_client()
 
