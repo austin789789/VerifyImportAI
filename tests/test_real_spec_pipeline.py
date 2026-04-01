@@ -138,6 +138,44 @@ def test_registered_real_spec_can_flow_from_listing_to_bundle_generation() -> No
     assert payload["audit_rationale"]["source_refs"][0]["spec_id"] == section_id
 
 
+def test_direct_bundle_generation_from_document_id_and_section_key() -> None:
+    client = make_memory_client()
+
+    response = client.post(
+        "/pipelines/markdown-specs/triumph-s6867-07/sections/sec_007/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["note"]["source_spec_ids"] == ["S-triumph-s6867-07-sec_007"]
+    assert payload["requirement"]["source_spec_ids"] == ["S-triumph-s6867-07-sec_007"]
+    assert payload["audit_rationale"]["source_refs"][0]["spec_id"] == "S-triumph-s6867-07-sec_007"
+
+
+def test_direct_bundle_generation_rejects_unknown_section_key_for_registered_document() -> None:
+    client = make_memory_client()
+
+    response = client.post(
+        "/pipelines/markdown-specs/triumph-s6867-07/sections/sec_999/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": "section_key sec_999 is not available for document_id triumph-s6867-07",
+        "detail": None,
+    }
+
+
 def test_extract_markdown_sections_rejects_unknown_manifest_document_id() -> None:
     client = make_memory_client()
 

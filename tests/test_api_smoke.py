@@ -50,6 +50,24 @@ def test_registered_real_spec_listing_smoke() -> None:
     ]
 
 
+def test_registered_real_spec_direct_bundle_generation_smoke() -> None:
+    client = make_memory_client()
+
+    response = client.post(
+        "/pipelines/markdown-specs/triumph-s6867-07/sections/sec_007/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["requirement"]["artifact_type"] == "requirement"
+    assert payload["audit_rationale"]["artifact_id"] == payload["requirement"]["id"]
+
+
 def create_note(client: TestClient, source_spec_id: str) -> str:
     note_response = client.post(
         "/notes",

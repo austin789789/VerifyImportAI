@@ -29,7 +29,12 @@ from .models import (
     SubmitReviewRequest,
     TestRequirement,
 )
-from .pipeline import extract_markdown_sections, generate_requirement_bundle, list_registered_real_specs
+from .pipeline import (
+    extract_markdown_sections,
+    generate_requirement_bundle,
+    generate_requirement_bundle_for_document_section,
+    list_registered_real_specs,
+)
 from .repository import InMemoryRepository, Repository, next_id, repository as default_repository
 
 
@@ -98,6 +103,19 @@ def create_app(repository: Repository | None = None) -> FastAPI:
         repository: Repository = Depends(get_repository),
     ) -> RequirementBundleResponse:
         return generate_requirement_bundle(spec_section_id, request, repository)
+
+    @app.post(
+        "/pipelines/markdown-specs/{document_id}/sections/{section_key}/generate-requirement-bundle",
+        response_model=RequirementBundleResponse,
+        status_code=status.HTTP_201_CREATED,
+    )
+    def generate_real_spec_requirement_bundle_from_document_section(
+        document_id: str,
+        section_key: str,
+        request: GenerateRequirementBundleRequest,
+        repository: Repository = Depends(get_repository),
+    ) -> RequirementBundleResponse:
+        return generate_requirement_bundle_for_document_section(document_id, section_key, request, repository)
     @app.post("/notes", response_model=Note, status_code=status.HTTP_201_CREATED)
     def create_note(
         request: CreateNoteRequest,
