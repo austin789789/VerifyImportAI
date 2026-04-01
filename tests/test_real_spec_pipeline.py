@@ -107,6 +107,37 @@ def test_list_registered_real_specs_from_manifest() -> None:
     }
 
 
+def test_registered_real_spec_can_flow_from_listing_to_bundle_generation() -> None:
+    client = make_memory_client()
+
+    listing_response = client.get("/pipelines/markdown-specs/registered")
+    assert listing_response.status_code == 200
+
+    registered = listing_response.json()["items"]
+    triumph = next(item for item in registered if item["document_id"] == "triumph-s6867-07")
+
+    extract_response = client.post(
+        "/pipelines/markdown-specs/extract",
+        json={"document_id": triumph["document_id"]},
+    )
+    assert extract_response.status_code == 201
+
+    section_id = "S-triumph-s6867-07-sec_007"
+    bundle_response = client.post(
+        f"/pipelines/spec-sections/{section_id}/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+
+    assert bundle_response.status_code == 201
+    payload = bundle_response.json()
+    assert payload["requirement"]["source_spec_ids"] == [section_id]
+    assert payload["audit_rationale"]["source_refs"][0]["spec_id"] == section_id
+
+
 def test_extract_markdown_sections_rejects_unknown_manifest_document_id() -> None:
     client = make_memory_client()
 
