@@ -172,6 +172,42 @@ def test_get_registered_real_spec_section_detail_rejects_unknown_document_id() -
     }
 
 
+def test_registered_real_spec_section_detail_persists_across_sqlite_app_instances(tmp_path: Path) -> None:
+    db_path = tmp_path / "section-detail-sqlite.db"
+    client_a = make_sqlite_client(db_path)
+
+    first_response = client_a.get("/pipelines/markdown-specs/triumph-s6867-07/sections/sec_007")
+    assert first_response.status_code == 200
+
+    client_b = make_sqlite_client(db_path)
+
+    second_response = client_b.get("/pipelines/markdown-specs/triumph-s6867-07/sections/sec_007")
+    assert second_response.status_code == 200
+    payload = second_response.json()
+    assert payload["id"] == "S-triumph-s6867-07-sec_007"
+    assert payload["title"] == "Operation"
+    assert [ref["page"] for ref in payload["source_refs"]] == [2, 3, 4]
+    assert "Range to Empty calculation shall be carried out" in payload["text"]
+
+
+def test_kawasaki_real_spec_section_detail_persists_across_sqlite_app_instances(tmp_path: Path) -> None:
+    db_path = tmp_path / "kawasaki-section-detail-sqlite.db"
+    client_a = make_sqlite_client(db_path)
+
+    first_response = client_a.get("/pipelines/markdown-specs/kawasaki-global-req/sections/sec_001")
+    assert first_response.status_code == 200
+
+    client_b = make_sqlite_client(db_path)
+
+    second_response = client_b.get("/pipelines/markdown-specs/kawasaki-global-req/sections/sec_001")
+    assert second_response.status_code == 200
+    payload = second_response.json()
+    assert payload["id"] == "S-kawasaki-global-req-sec_001"
+    assert payload["title"] == "テストスペック"
+    assert "49245-1528を満足すること" in payload["text"]
+    assert payload["parser_warnings"] == []
+
+
 def test_registered_real_spec_can_flow_from_listing_to_bundle_generation() -> None:
     client = make_memory_client()
 
