@@ -11,6 +11,7 @@ from fastapi import HTTPException, status
 
 from .models import (
     AuditRationale,
+    AuditSourceRef,
     CodebeamerExportRequest,
     ExportJobResponse,
     Note,
@@ -45,6 +46,27 @@ def build_generated_test_requirement(requirement: Requirement) -> TestRequiremen
         statement=statement,
         source_requirement_ids=[requirement.id],
         acceptance_criteria=acceptance_criteria,
+    )
+
+
+def build_generated_test_requirement_audit(
+    test_requirement: TestRequirement,
+    source_audit: AuditRationale,
+) -> AuditRationale:
+    return AuditRationale(
+        id=next_id("AR"),
+        artifact_id=test_requirement.id,
+        source_refs=[
+            AuditSourceRef(
+                spec_id=source_ref.spec_id,
+                page=source_ref.page,
+                bbox=source_ref.bbox,
+            )
+            for source_ref in source_audit.source_refs
+        ],
+        prompt_version=source_audit.prompt_version,
+        model_version=source_audit.model_version,
+        silver_refs=source_audit.silver_refs,
     )
 
 
@@ -888,7 +910,12 @@ class SQLiteRepository:
             existing = self.get_test_requirement(downstream_id)
             if existing.status != "ARCHIVED":
                 raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Active downstream test requirement already exists")
-        return self.create_test_requirement(build_generated_test_requirement(requirement))
+        test_requirement = self.create_test_requirement(build_generated_test_requirement(requirement))
+        if requirement.audit_rationale_id:
+            source_audit = self.get_audit_rationale(requirement.audit_rationale_id)
+            generated_audit = self.create_audit_rationale(build_generated_test_requirement_audit(test_requirement, source_audit))
+            test_requirement = self.patch_test_requirement(test_requirement.id, None, None, generated_audit.id)
+        return test_requirement
 
     def create_test_requirement(self, test_requirement: TestRequirement) -> TestRequirement:
         for source_requirement_id in test_requirement.source_requirement_ids:
