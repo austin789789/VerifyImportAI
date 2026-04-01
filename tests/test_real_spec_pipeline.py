@@ -193,3 +193,63 @@ def test_extract_and_generate_bundle_from_kawasaki_japanese_spec() -> None:
     assert payload["note"]["summary"] == "テストスペック49245-1528を満足すること"
     assert payload["requirement"]["statement"] == "テストスペック49245-1528を満足すること"
     assert payload["audit_rationale"]["source_refs"][0]["page"] == 1
+
+
+def test_approved_real_spec_requirement_can_generate_downstream_test_requirement() -> None:
+    client = make_memory_client()
+    extract_response = client.post(
+        "/pipelines/markdown-specs/extract",
+        json={
+            "document_id": "triumph-s6867-07",
+            "markdown_path": str(TRIUMPH_SPEC_PATH),
+        },
+    )
+    assert extract_response.status_code == 201
+
+    section_id = "S-triumph-s6867-07-sec_007"
+    bundle_response = client.post(
+        f"/pipelines/spec-sections/{section_id}/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+    assert bundle_response.status_code == 201
+    payload = bundle_response.json()
+    requirement_id = payload["requirement"]["id"]
+
+    submit_response = client.post(
+        f"/requirements/{requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a"},
+    )
+    assert submit_response.status_code == 200
+
+    approve_response = client.post(
+        "/reviews",
+        json={
+            "artifact_id": requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Approved for downstream test generation.",
+        },
+    )
+    assert approve_response.status_code == 201
+
+    generate_response = client.post(f"/requirements/{requirement_id}/generate-test-requirement")
+    assert generate_response.status_code == 201
+    generated = generate_response.json()
+
+    assert generated["artifact_type"] == "test_requirement"
+    assert generated["status"] == "DRAFT"
+    assert generated["source_requirement_ids"] == [requirement_id]
+    assert generated["statement"].startswith("Verify:")
+    assert "Range to Empty calculation shall be carried out" in generated["statement"]
+
+    requirement_trace = client.get(f"/trace/{requirement_id}")
+    assert requirement_trace.status_code == 200
+    assert generated["id"] in requirement_trace.json()["downstream_ids"]
+
+    test_requirement_trace = client.get(f"/trace/{generated['id']}")
+    assert test_requirement_trace.status_code == 200
+    assert requirement_id in test_requirement_trace.json()["upstream_ids"]
