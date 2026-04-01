@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from specops_api.app import create_app
 from specops_api.repository import InMemoryRepository, SQLiteRepository
+from specops_api import pipeline as pipeline_module
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -450,3 +452,49 @@ def test_kawasaki_real_spec_pipeline_persists_and_generates_downstream_artifacts
     assert section_id in trace["upstream_ids"]
     assert test_requirement_id in trace["downstream_ids"]
     assert trace["audit_rationale_id"] == audit_id
+
+
+def test_markdown_extraction_rejects_paths_outside_repo() -> None:
+    client = make_memory_client()
+    outside_path = Path.cwd().anchor + "outside-spec.md"
+
+    response = client.post(
+        "/pipelines/markdown-specs/extract",
+        json={
+            "document_id": "outside-doc",
+            "markdown_path": outside_path,
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "error": "markdown_path must stay within the repo workspace",
+        "detail": None,
+    }
+
+
+def test_markdown_only_fallback_extraction_without_content_list(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    client = make_memory_client()
+    markdown_path = tmp_path / "fallback-spec.md"
+    markdown_path.write_text(
+        "# 1 Scope\n\nThe system shall support fallback extraction.\n\n# 2 Constraints\n\nThe device shall remain deterministic.\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(pipeline_module, "REPO_ROOT", tmp_path)
+
+    response = client.post(
+        "/pipelines/markdown-specs/extract",
+        json={
+            "document_id": "fallback-doc",
+            "markdown_path": str(markdown_path),
+        },
+    )
+
+    assert response.status_code == 201
+    items = response.json()["items"]
+    assert len(items) == 2
+    assert items[0]["id"] == "S-fallback-doc-sec_001"
+    assert items[0]["title"] == "Scope"
+    assert items[0]["source_refs"] == [{"page": 1, "bbox": None, "table_ref": None}]
+    assert items[1]["id"] == "S-fallback-doc-sec_002"
+    assert items[1]["title"] == "Constraints"

@@ -91,13 +91,15 @@ def generate_requirement_bundle(
 
 def _resolve_repo_path(raw_path: str) -> Path:
     path = Path(raw_path)
-    resolved = path.resolve(strict=True)
+    resolved = path.resolve(strict=False)
     try:
         resolved.relative_to(REPO_ROOT)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="markdown_path must stay within the repo workspace") from exc
     if resolved.suffix.lower() != ".md":
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="markdown_path must point to a Markdown file")
+    if not resolved.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="markdown_path not found")
     return resolved
 
 
