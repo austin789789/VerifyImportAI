@@ -176,6 +176,63 @@ def test_direct_bundle_generation_rejects_unknown_section_key_for_registered_doc
     }
 
 
+def test_direct_bundle_generation_can_flow_through_review_export_and_test_generation() -> None:
+    client = make_memory_client()
+
+    bundle_response = client.post(
+        "/pipelines/markdown-specs/triumph-s6867-07/sections/sec_007/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+    assert bundle_response.status_code == 201
+
+    payload = bundle_response.json()
+    requirement_id = payload["requirement"]["id"]
+    audit_id = payload["audit_rationale"]["id"]
+
+    submit_response = client.post(
+        f"/requirements/{requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a", "review_note": "ready from direct bundle path"},
+    )
+    assert submit_response.status_code == 200
+    assert submit_response.json()["status"] == "IN_REVIEW"
+
+    approve_response = client.post(
+        "/reviews",
+        json={
+            "artifact_id": requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Approved from direct bundle path.",
+        },
+    )
+    assert approve_response.status_code == 201
+    assert approve_response.json()["artifact"]["status"] == "APPROVED"
+    assert approve_response.json()["artifact"]["audit_rationale_id"] == audit_id
+
+    export_response = client.post(
+        "/exports/codebeamer",
+        json={"requirement_id": requirement_id, "requested_by": "user-a"},
+    )
+    assert export_response.status_code == 200
+    assert export_response.json()["status"] == "QUEUED"
+
+    generate_response = client.post(f"/requirements/{requirement_id}/generate-test-requirement")
+    assert generate_response.status_code == 201
+    generated = generate_response.json()
+    assert generated["artifact_type"] == "test_requirement"
+    assert generated["source_requirement_ids"] == [requirement_id]
+
+    trace_response = client.get(f"/trace/{requirement_id}")
+    assert trace_response.status_code == 200
+    trace = trace_response.json()
+    assert trace["status"] == "APPROVED"
+    assert generated["id"] in trace["downstream_ids"]
+
+
 def test_extract_markdown_sections_rejects_unknown_manifest_document_id() -> None:
     client = make_memory_client()
 
