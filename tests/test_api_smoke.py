@@ -125,6 +125,44 @@ def test_registered_real_spec_direct_bundle_generation_smoke() -> None:
     assert payload["audit_rationale"]["artifact_id"] == payload["requirement"]["id"]
 
 
+def test_registered_real_spec_direct_bundle_generation_not_found_smoke() -> None:
+    client = make_memory_client()
+
+    response = client.post(
+        "/pipelines/markdown-specs/triumph-s6867-07/sections/sec_999/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": "section_key sec_999 is not available for document_id triumph-s6867-07",
+        "detail": None,
+    }
+
+
+def test_registered_real_spec_direct_bundle_generation_unknown_document_smoke() -> None:
+    client = make_memory_client()
+
+    response = client.post(
+        "/pipelines/markdown-specs/unknown-real-spec/sections/sec_001/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": "document_id unknown-real-spec is not registered in fixtures/real_spec_assets.json",
+        "detail": None,
+    }
+
+
 def create_note(client: TestClient, source_spec_id: str) -> str:
     note_response = client.post(
         "/notes",
