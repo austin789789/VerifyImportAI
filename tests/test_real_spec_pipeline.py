@@ -208,6 +208,88 @@ def test_kawasaki_real_spec_section_detail_persists_across_sqlite_app_instances(
     assert payload["parser_warnings"] == []
 
 
+def test_section_detail_to_bundle_generation_persists_across_sqlite_app_instances(tmp_path: Path) -> None:
+    db_path = tmp_path / "section-detail-to-bundle-sqlite.db"
+    client_a = make_sqlite_client(db_path)
+
+    section_response = client_a.get("/pipelines/markdown-specs/triumph-s6867-07/sections/sec_007")
+    assert section_response.status_code == 200
+    section = section_response.json()
+    assert section["title"] == "Operation"
+    assert [ref["page"] for ref in section["source_refs"]] == [2, 3, 4]
+
+    bundle_response = client_a.post(
+        f"/pipelines/markdown-specs/triumph-s6867-07/sections/{section['section_key']}/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+    assert bundle_response.status_code == 201
+    bundle = bundle_response.json()
+    requirement_id = bundle["requirement"]["id"]
+    note_id = bundle["note"]["id"]
+    audit_id = bundle["audit_rationale"]["id"]
+
+    submit_response = client_a.post(
+        f"/requirements/{requirement_id}/submit-review",
+        json={"reviewer_id": "reviewer-a", "review_note": "ready from section detail sqlite path"},
+    )
+    assert submit_response.status_code == 200
+
+    approve_response = client_a.post(
+        "/reviews",
+        json={
+            "artifact_id": requirement_id,
+            "decision": "APPROVED",
+            "reviewer_id": "reviewer-a",
+            "review_note": "Approved from section detail sqlite path.",
+        },
+    )
+    assert approve_response.status_code == 201
+    assert approve_response.json()["artifact"]["audit_rationale_id"] == audit_id
+
+    export_response = client_a.post(
+        "/exports/codebeamer",
+        json={"requirement_id": requirement_id, "requested_by": "user-a"},
+    )
+    assert export_response.status_code == 200
+    assert export_response.json()["status"] == "QUEUED"
+
+    generate_response = client_a.post(f"/requirements/{requirement_id}/generate-test-requirement")
+    assert generate_response.status_code == 201
+    test_requirement_id = generate_response.json()["id"]
+
+    client_b = make_sqlite_client(db_path)
+
+    section_reloaded = client_b.get("/pipelines/markdown-specs/triumph-s6867-07/sections/sec_007")
+    assert section_reloaded.status_code == 200
+    assert section_reloaded.json()["id"] == section["id"]
+    assert [ref["page"] for ref in section_reloaded.json()["source_refs"]] == [2, 3, 4]
+
+    note_response = client_b.get(f"/notes/{note_id}")
+    assert note_response.status_code == 200
+    assert note_response.json()["source_spec_ids"] == [section["id"]]
+
+    requirement_response = client_b.get(f"/requirements/{requirement_id}")
+    assert requirement_response.status_code == 200
+    assert requirement_response.json()["status"] == "APPROVED"
+    assert requirement_response.json()["audit_rationale_id"] == audit_id
+
+    test_requirement_response = client_b.get(f"/test-requirements/{test_requirement_id}")
+    assert test_requirement_response.status_code == 200
+    assert test_requirement_response.json()["source_requirement_ids"] == [requirement_id]
+
+    trace_response = client_b.get(f"/trace/{requirement_id}")
+    assert trace_response.status_code == 200
+    trace = trace_response.json()
+    assert note_id in trace["upstream_ids"]
+    assert section["id"] in trace["upstream_ids"]
+    assert test_requirement_id in trace["downstream_ids"]
+    assert trace["audit_rationale_id"] == audit_id
+
+
 def test_registered_real_spec_can_flow_from_listing_to_bundle_generation() -> None:
     client = make_memory_client()
 
