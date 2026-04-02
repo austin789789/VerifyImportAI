@@ -137,6 +137,25 @@ def test_registered_real_spec_direct_bundle_generation_smoke() -> None:
     assert payload["audit_rationale"]["artifact_id"] == payload["requirement"]["id"]
 
 
+def test_registered_kawasaki_direct_bundle_generation_smoke() -> None:
+    client = make_memory_client()
+
+    response = client.post(
+        "/pipelines/markdown-specs/kawasaki-global-req/sections/sec_001/generate-requirement-bundle",
+        json={
+            "prompt_version": "deterministic-note-v1",
+            "model_version": "rule-based-generator-v1",
+            "variant_scope": "base",
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["requirement"]["artifact_type"] == "requirement"
+    assert payload["requirement"]["source_spec_ids"] == ["S-kawasaki-global-req-sec_001"]
+    assert payload["audit_rationale"]["artifact_id"] == payload["requirement"]["id"]
+
+
 def test_registered_real_spec_direct_bundle_generation_not_found_smoke() -> None:
     client = make_memory_client()
 
