@@ -72,6 +72,30 @@ def test_registered_real_spec_section_detail_smoke() -> None:
     assert payload["title"] == "Operation"
 
 
+def test_registered_real_spec_section_detail_not_found_smoke() -> None:
+    client = make_memory_client()
+
+    response = client.get("/pipelines/markdown-specs/triumph-s6867-07/sections/sec_999")
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": "section_key sec_999 is not available for document_id triumph-s6867-07",
+        "detail": None,
+    }
+
+
+def test_registered_real_spec_section_detail_unknown_document_smoke() -> None:
+    client = make_memory_client()
+
+    response = client.get("/pipelines/markdown-specs/unknown-real-spec/sections/sec_001")
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": "document_id unknown-real-spec is not registered in fixtures/real_spec_assets.json",
+        "detail": None,
+    }
+
+
 def test_registered_kawasaki_section_detail_smoke() -> None:
     client = make_memory_client()
 
