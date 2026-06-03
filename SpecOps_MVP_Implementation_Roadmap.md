@@ -257,6 +257,15 @@ MVP 先不追求完整車載閉環，不做過度承諾項目，例如：
 - MVP 可先用邏輯 graph model + adjacency storage
 - 不急著上重型 graph database
 - 先把 edge taxonomy 固定比較重要
+- 可借鑑 Graphify 的輕量圖譜 pipeline，但不要直接導入其完整工具鏈：
+  - 先建立 `detect -> extract -> build_trace_graph -> analyze -> report -> export` 的可測試分層。
+  - graph artifact 先輸出為 `trace_graph.json` 與 `TRACE_GRAPH_REPORT.md`，讓 traceability 可被重建、查詢與審查。
+  - node 至少保留 `id`, `label`, `artifact_type`, `source_location`；edge 至少保留 `source`, `target`, `relation`, `confidence`。
+  - edge confidence 採 `EXTRACTED`, `INFERRED`, `AMBIGUOUS`：MVP 先只產生 `EXTRACTED`，語意推論與人工待確認關係留到後續。
+  - `AMBIGUOUS` edge 必須進 review/report，不可直接當正式 trace 使用。
+  - Graph report 優先列出斷鏈、缺 audit、high-degree artifact、可能 impact scope，不先投入完整 graph editor。
+  - 對大型 spec / content list / image manifest 採 source fingerprint cache，避免 unchanged source 重複抽取。
+  - graph 匯出路徑、node label、外部輸入與抽取結果必須先 validation，再進入 graph build。
 
 ### 3. LLM Strategy
 
@@ -279,6 +288,8 @@ MVP 先不追求完整車載閉環，不做過度承諾項目，例如：
 - 太早做 graph UI 會消耗大量時間但不提升 MVP 成功率
 - 太早做 automotive 深整合會把通用核心拖慢
 - 若將目前 SQLite cleanup semantics 誤當成正式產品 lifecycle contract，後續 delete / recovery API 會被過早綁死
+- 若未區分 `EXTRACTED` / `INFERRED` / `AMBIGUOUS`，後續 GraphRAG 或 impact analysis 可能把猜測關係誤當成審核後事實
+- 若 graph 只存在 API 即時計算結果而沒有可重建 artifact，audit report、回歸比較與跨 session 分析會缺少穩定基準
 
 ---
 
@@ -295,6 +306,10 @@ MVP 先不追求完整車載閉環，不做過度承諾項目，例如：
 - 建 review reject tags v1
 - 建 golden regression fixtures v1
 - 明確文件化 persistence baseline 與 cleanup 邊界
+- 建 `trace_graph.json` export 與 `TRACE_GRAPH_REPORT.md`
+- 補 `graph_edge` confidence taxonomy 與 ambiguous edge review rule
+- 補 graph extraction / report 的純 unit regression fixtures
+- 補 source fingerprint cache 的最小策略文件
 
 ---
 
